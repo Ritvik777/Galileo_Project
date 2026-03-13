@@ -1,5 +1,7 @@
 # Self-Corrective RAG with LangGraph
 
+**[Read the full walkthrough blog post](https://ritvik777.github.io/Introduction-to-RAG/)**
+
 A portfolio-grade Retrieval-Augmented Generation app that demonstrates **agentic AI patterns** — conditional routing, self-correction, and observability — using LangGraph.
 
 ## Architecture
