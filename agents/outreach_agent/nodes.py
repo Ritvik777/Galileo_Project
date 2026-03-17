@@ -80,12 +80,23 @@ def outreach_generate(state: AgentState) -> dict:
             f"Request: {state['question']}"
         )
     else:
+        recipient_emails = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', state["question"])
+        recipient_hint = ""
+        if recipient_emails:
+            recipient_hint = (
+                f"\nThe user specified recipient(s): {', '.join(recipient_emails)}. "
+                "Address the email to them and include their email in the output "
+                "using the format: **To:** name (email@example.com)\n"
+            )
+
         prompt = (
             "You are a content specialist. Create EXACTLY what the user asks for.\n"
             "- If they ask for a LinkedIn post: write ONLY a LinkedIn post\n"
             "- If they ask for an email: write ONLY an email\n"
             "- Do NOT create multiple content types\n"
-            "- No placeholder text like [Your Name]\n\n"
+            "- No placeholder text like [Your Name]\n"
+            "- Sign off as 'The Galileo Team'\n"
+            f"{recipient_hint}\n"
             f"Context:\n{ctx}\n\n"
             f"Request: {state['question']}\nContent:"
         )
@@ -113,21 +124,34 @@ def outreach_send(state: AgentState) -> dict:
     emails_found = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', content)
 
     if not emails_found:
+        emails_found = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', state["question"])
+
+    if not emails_found:
         return {
             "answer": state["answer"] + "\n\n---\n⚠️ *No email addresses found in drafts to send.*",
             "steps": ["Outreach Send → ❌ no emails found in generated content"],
         }
 
+    subject_match = re.search(r'\*{0,2}Subject:?\*{0,2}\s*(.+)', content)
+    subject = subject_match.group(1).strip() if subject_match else "A Personalized Introduction to Galileo"
+
+    body = re.sub(r'\*{0,2}To:?\*{0,2}.*\n?', '', content)
+    body = re.sub(r'\*{0,2}Subject:?\*{0,2}.*\n?', '', body)
+    body = body.strip().strip('-').strip()
+
+    body = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', body)
+    body_html = ''.join(f'<p style="margin: 0 0 12px 0;">{p.strip()}</p>'
+                        for p in body.split('\n\n') if p.strip())
+    if not body_html:
+        body_html = body.replace('\n', '<br>')
+
     sent = []
     failed = []
 
     for to in emails_found:
-        subject = "A Personalized Introduction to Galileo"
-        body = content
-
         html = f"""
         <div style="font-family: -apple-system, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a; line-height: 1.6;">
-            {body}
+            {body_html}
             <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;">
             <p style="font-size: 12px; color: #999;">Sent via Galileo Marketing AI</p>
         </div>
