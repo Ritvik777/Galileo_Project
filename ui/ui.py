@@ -5,24 +5,80 @@ from services.agent_service import ask_agent, load_graph_image
 
 STYLE_BLOCK = """
 <style>
+    :root {
+        --app-bg: #ffffff;
+        --panel-bg: #f7f7f7;
+        --card-bg: #ffffff;
+        --border: #d9d9d9;
+        --text-main: #111111;
+        --text-muted: #4b4b4b;
+        --brand: #111111;
+    }
+    .stApp {
+        background: var(--app-bg) !important;
+        color: var(--text-main) !important;
+    }
+    [data-testid="stAppViewContainer"] {
+        background: var(--app-bg) !important;
+    }
+    [data-testid="stHeader"] {
+        background: #ffffff !important;
+    }
     [data-testid="stSidebar"] {
-        background: var(--secondary-background-color);
+        background: var(--panel-bg) !important;
+        border-right: 1px solid var(--border);
+    }
+    [data-testid="stSidebar"] * {
+        color: var(--text-main) !important;
+    }
+    .stMarkdown, .stCaption, .stText, p, label, h1, h2, h3 {
+        color: var(--text-main) !important;
+    }
+    .stTextInput input, .stTextArea textarea, .stChatInput textarea, [data-testid="stChatInput"] textarea {
+        background: var(--card-bg) !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+    }
+    [data-testid="stBottomBlockContainer"] {
+        background: #ffffff !important;
+        border-top: 1px solid var(--border);
+    }
+    [data-testid="stChatInput"] {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    [data-testid="stChatInputContainer"] {
+        background: #ffffff !important;
+    }
+    .stButton button {
+        background: #ffffff !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+    }
+    .stAlert {
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+    }
+    [data-testid="stSidebar"] {
+        background: var(--panel-bg);
     }
     .agent-badge {
         display: inline-block;
         font-size: 12px;
         font-weight: 600;
-        padding: 4px 12px;
-        border-radius: 20px;
+        padding: 4px 10px;
+        border-radius: 999px;
         margin-bottom: 8px;
     }
-    .badge-gtm { background: #059669; color: white; }
-    .badge-outreach { background: #2563eb; color: white; }
+    .badge-gtm { background: #eeeeee; color: #111111; }
+    .badge-outreach { background: #eeeeee; color: #111111; }
     .trace-step {
-        background: var(--secondary-background-color);
-        color: var(--text-color);
-        border-left: 3px solid #6366f1;
-        border: 1px solid rgba(128, 128, 128, 0.35);
+        background: var(--card-bg);
+        color: var(--text-main);
+        border-left: 3px solid var(--brand);
+        border: 1px solid var(--border);
         padding: 8px 14px;
         margin: 4px 0;
         border-radius: 0 6px 6px 0;
@@ -31,23 +87,22 @@ STYLE_BLOCK = """
     }
     .hero-subtitle {
         font-size: 14px;
-        color: var(--text-color);
-        opacity: 0.78;
+        color: var(--text-muted);
         margin-top: -10px;
         margin-bottom: 20px;
     }
     .stat-card {
-        background: var(--secondary-background-color);
-        border: 1px solid rgba(128, 128, 128, 0.35);
+        background: var(--card-bg);
+        border: 1px solid var(--border);
         border-radius: 10px;
         padding: 16px;
         text-align: center;
+        box-shadow: none;
     }
-    .stat-number { font-size: 28px; font-weight: 700; color: #a78bfa; }
+    .stat-number { font-size: 28px; font-weight: 700; color: var(--brand); }
     .stat-label {
         font-size: 12px;
-        color: var(--text-color);
-        opacity: 0.72;
+        color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 1px;
     }

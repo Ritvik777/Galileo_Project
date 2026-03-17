@@ -5,7 +5,7 @@ The "brain" that reads text and generates answers.
 from langchain_openai import ChatOpenAI
 from config import OPENAI_API_KEY, LLM_MODEL
 
-def get_llm(temperature=7):
+def get_llm(temperature=0.7):
     """
     Create and return the OpenAI chat model.
     """
@@ -13,7 +13,7 @@ def get_llm(temperature=7):
         raise RuntimeError(
             "OPENAI_API_KEY is missing. Add it to your .env file and restart Streamlit."
         )
-        
+
     return ChatOpenAI(
         model=LLM_MODEL,
         temperature=temperature,
