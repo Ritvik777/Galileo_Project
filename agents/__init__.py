@@ -11,13 +11,38 @@ agents/ — The multi-agent system
 """
 
 from agents.graph import graph
+from observability import ensure_galileo_initialized, get_logger_instance, is_galileo_enabled
 
 
 def ask(question: str) -> dict:
-    return graph.invoke({
+    ensure_galileo_initialized()
+    base_state = {
         "question": question, "agent_type": "", "context": "", "answer": "",
         "is_pricing": False, "user_email": "", "send_requested": False, "steps": [],
-    })
+    }
+    if not is_galileo_enabled():
+        return graph.invoke(base_state)
+
+    logger = get_logger_instance()
+    if logger is None:
+        return graph.invoke(base_state)
+
+    in_existing_trace = logger.current_parent() is not None
+    if not in_existing_trace:
+        logger.start_trace(input={"question": question}, name="ask_agent")
+    try:
+        result = graph.invoke(base_state)
+        if not in_existing_trace:
+            logger.conclude(result.get("answer", ""))
+            logger.flush()
+        return result
+    except Exception:
+        if not in_existing_trace:
+            try:
+                logger.flush()
+            except Exception:
+                pass
+        raise
 
 
 def get_graph_image() -> bytes:

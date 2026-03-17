@@ -2,10 +2,12 @@ import re
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, call_tools
+from observability import get_langchain_config, log_span
 
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
+@log_span(span_type="workflow", name="gtm_retrieve")
 def gtm_retrieve(state: AgentState) -> dict:
     ctx, log = call_tools(
         state["question"],
@@ -20,11 +22,16 @@ def gtm_retrieve(state: AgentState) -> dict:
     return {"context": ctx, "steps": [f"GTM Retrieve → {', '.join(log) or 'none'}"]}
 
 
+@log_span(span_type="workflow", name="pricing_gate")
 def pricing_gate(state: AgentState) -> dict:
     resp = get_llm(temperature=0).invoke(
         "Does this question ask about pricing, cost, or plans? "
         "Reply ONLY 'yes' or 'no'.\n\n"
-        f"Question: {state['question']}\nAnswer:"
+        f"Question: {state['question']}\nAnswer:",
+        config=get_langchain_config(
+            metadata={"node": "pricing_gate", "agent_type": "gtm"},
+            tags=["agent:gtm", "gate:pricing"],
+        ) or None,
     )
     is_pricing = "yes" in resp.content.strip().lower()
     label = "🔒 pricing — email needed" if is_pricing else "✅ not pricing"
@@ -35,6 +42,7 @@ def route_pricing(state: AgentState) -> str:
     return "pricing" if state.get("is_pricing") else "not_pricing"
 
 
+@log_span(span_type="workflow", name="collect_email")
 def collect_email(state: AgentState) -> dict:
     match = re.search(EMAIL_PATTERN, state["question"])
     if not match:
@@ -50,6 +58,7 @@ def route_email(state: AgentState) -> str:
     return "valid" if state.get("user_email") else "no_email"
 
 
+@log_span(span_type="agent", name="gtm_generate")
 def gtm_generate(state: AgentState) -> dict:
     llm = get_llm()
     extra = ""
@@ -58,6 +67,14 @@ def gtm_generate(state: AgentState) -> dict:
     resp = llm.invoke(
         f"You are a product specialist. Answer using ONLY this context.{extra}\n\n"
         f"Context:\n{state['context']}\n\n"
-        f"Question: {state['question']}\nAnswer:"
+        f"Question: {state['question']}\nAnswer:",
+        config=get_langchain_config(
+            metadata={
+                "node": "gtm_generate",
+                "agent_type": "gtm",
+                "has_user_email": bool(state.get("user_email")),
+            },
+            tags=["agent:gtm", "phase:generate"],
+        ) or None,
     )
     return {"answer": resp.content, "steps": [f"GTM Generate → {len(resp.content)} chars"]}

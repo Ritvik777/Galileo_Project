@@ -2,6 +2,7 @@ import re
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, apollo_search, send_email, call_tools
+from observability import get_langchain_config, log_span
 
 
 LEAD_KEYWORDS = {"research leads", "find leads", "find prospects", "find companies", "find people", "who can i", "prospect", "leads for"}
@@ -23,6 +24,7 @@ def _extract_emails(text: str) -> list[str]:
     return re.findall(EMAIL_PATTERN, text)
 
 
+@log_span(span_type="workflow", name="outreach_research")
 def outreach_research(state: AgentState) -> dict:
     q = state["question"]
 
@@ -52,6 +54,7 @@ def outreach_research(state: AgentState) -> dict:
     return {"context": ctx, "steps": [f"Outreach Research → {', '.join(log) or 'none'}"]}
 
 
+@log_span(span_type="agent", name="outreach_generate")
 def outreach_generate(state: AgentState) -> dict:
     llm = get_llm(temperature=0.7)
 
@@ -100,10 +103,21 @@ def outreach_generate(state: AgentState) -> dict:
             f"Request: {state['question']}\nContent:"
         )
 
-    resp = llm.invoke(prompt)
+    resp = llm.invoke(
+        prompt,
+        config=get_langchain_config(
+            metadata={
+                "node": "outreach_generate",
+                "agent_type": "outreach",
+                "send_requested": bool(state.get("send_requested")),
+            },
+            tags=["agent:outreach", "phase:generate"],
+        ) or None,
+    )
     return {"answer": resp.content, "steps": [f"Outreach Generate → {len(resp.content)} chars"]}
 
 
+@log_span(span_type="workflow", name="send_gate")
 def send_gate(state: AgentState) -> dict:
     should_send = _should_send(state["question"])
     label = "📤 user wants to SEND" if should_send else "👀 review only (no send)"
@@ -114,6 +128,7 @@ def route_send(state: AgentState) -> str:
     return "send" if state.get("send_requested") else "review"
 
 
+@log_span(span_type="tool", name="outreach_send")
 def outreach_send(state: AgentState) -> dict:
     content = state["answer"]
     emails_found = _extract_emails(content)

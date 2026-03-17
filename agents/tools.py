@@ -2,10 +2,12 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from vector_db import search_with_scores
 from llm import get_llm
+from observability import get_langchain_config, log_span
 import json
 
 
 @tool
+@log_span(span_type="tool", name="search_knowledge_base")
 def search_knowledge_base(query: str) -> str:
     """Search internal product docs stored in Qdrant."""
     results = search_with_scores(query, top_k=4)
@@ -15,6 +17,7 @@ def search_knowledge_base(query: str) -> str:
 
 
 @tool
+@log_span(span_type="tool", name="web_search")
 def web_search(query: str) -> str:
     """Search the live web via DuckDuckGo."""
     from duckduckgo_search import DDGS
@@ -34,6 +37,7 @@ def web_search(query: str) -> str:
 
 
 @tool
+@log_span(span_type="tool", name="apollo_search")
 def apollo_search(job_titles: str, location: str = "", industry: str = "", limit: int = 5) -> str:
     """Search Apollo.io for leads by job title, location, and industry. Returns names, titles, companies, and verified emails for outreach."""
     import os
@@ -118,6 +122,7 @@ def apollo_search(job_titles: str, location: str = "", industry: str = "", limit
 
 
 @tool
+@log_span(span_type="tool", name="send_email")
 def send_email(to_email: str, subject: str, html_body: str) -> str:
     """Send a personalized marketing email via SendGrid. Provide recipient email, subject line, and HTML body."""
     import os
@@ -144,6 +149,7 @@ def send_email(to_email: str, subject: str, html_body: str) -> str:
         return f"ERROR: {e}"
 
 
+@log_span(span_type="workflow", name="call_tools")
 def call_tools(question, tools, system_prompt):
     """LLM picks which tools to call, runs them, returns results."""
     tool_map = {t.name: t for t in tools}
@@ -155,9 +161,13 @@ def call_tools(question, tools, system_prompt):
 
     log = []
     seen_calls = set()
+    invoke_config = get_langchain_config(
+        metadata={"component": "tools", "question": question},
+        tags=["agent:shared", "phase:tool-routing"],
+    )
     for _ in range(3):
         try:
-            resp = llm.invoke(msgs)
+            resp = llm.invoke(msgs, config=invoke_config or None)
         except Exception as exc:
             return f"LLM_ERROR: {exc}", log
         msgs.append(resp)

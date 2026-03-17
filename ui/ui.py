@@ -1,6 +1,8 @@
 import streamlit as st
+from datetime import datetime, UTC
 from services.vector_db_service import add_text_documents, add_pdf_document
 from services.agent_service import ask_agent, load_graph_image
+from observability import start_chat_session
 
 
 STYLE_BLOCK = """
@@ -125,6 +127,17 @@ def initialize_session_state() -> None:
     st.session_state.setdefault("awaiting_email", False)
     st.session_state.setdefault("pricing_question", "")
     st.session_state.setdefault("pending_drafts", "")
+    st.session_state.setdefault("galileo_session_started", False)
+    if not st.session_state.messages:
+        st.session_state.galileo_session_started = False
+
+
+def _reset_chat_state() -> None:
+    st.session_state.messages = []
+    st.session_state.awaiting_email = False
+    st.session_state.pricing_question = ""
+    st.session_state.pending_drafts = ""
+    st.session_state.galileo_session_started = False
 
 
 def _render_trace(steps: list[str]) -> None:
@@ -226,6 +239,9 @@ def render_sidebar(doc_count: int) -> None:
     with st.sidebar:
         st.markdown("## 🚀 Galileo Marketing AI")
         st.caption("Multi-Agent RAG for GTM & Outreach")
+        if st.button("🆕 New Chat", use_container_width=True):
+            _reset_chat_state()
+            st.rerun()
         st.divider()
         _render_stats(doc_count)
         st.divider()
@@ -284,6 +300,9 @@ def _push_assistant_message(result: dict) -> None:
 
 
 def handle_new_prompt(prompt: str) -> None:
+    if not st.session_state.messages and not st.session_state.galileo_session_started:
+        session_name = f"streamlit-chat-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        st.session_state.galileo_session_started = start_chat_session(session_name)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):

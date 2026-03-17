@@ -8,3 +8,4 @@ qdrant-client
 python-dotenv
 pypdf
 duckduckgo-search
+galileo
