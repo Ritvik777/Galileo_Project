@@ -15,11 +15,21 @@ from agents.tools import search_knowledge_base, web_search, apollo_search, send_
 
 LEAD_KEYWORDS = {"research leads", "find leads", "find prospects", "find companies", "find people", "who can i", "prospect", "leads for"}
 SEND_KEYWORDS = {"send it", "send them", "send those", "send the email", "send email", "mail them", "email them", "deliver", "blast"}
+EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
 def _wants_leads(question: str) -> bool:
     q = question.lower()
     return any(kw in q for kw in LEAD_KEYWORDS)
+
+
+def _should_send(question: str) -> bool:
+    q = question.lower()
+    return any(kw in q for kw in SEND_KEYWORDS)
+
+
+def _extract_emails(text: str) -> list[str]:
+    return re.findall(EMAIL_PATTERN, text)
 
 
 def outreach_research(state: AgentState) -> dict:
@@ -80,7 +90,7 @@ def outreach_generate(state: AgentState) -> dict:
             f"Request: {state['question']}"
         )
     else:
-        recipient_emails = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', state["question"])
+        recipient_emails = _extract_emails(state["question"])
         recipient_hint = ""
         if recipient_emails:
             recipient_hint = (
@@ -106,25 +116,21 @@ def outreach_generate(state: AgentState) -> dict:
 
 
 def send_gate(state: AgentState) -> dict:
-    q = state["question"].lower()
-    should_send = any(kw in q for kw in SEND_KEYWORDS)
+    should_send = _should_send(state["question"])
     label = "📤 user wants to SEND" if should_send else "👀 review only (no send)"
-    return {"steps": [f"Send Gate → {label}"]}
+    return {"send_requested": should_send, "steps": [f"Send Gate → {label}"]}
 
 
 def route_send(state: AgentState) -> str:
-    q = state["question"].lower()
-    if any(kw in q for kw in SEND_KEYWORDS):
-        return "send"
-    return "review"
+    return "send" if state.get("send_requested") else "review"
 
 
 def outreach_send(state: AgentState) -> dict:
     content = state["answer"]
-    emails_found = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', content)
+    emails_found = _extract_emails(content)
 
     if not emails_found:
-        emails_found = re.findall(r'[\w.+-]+@[\w-]+\.[\w.]+', state["question"])
+        emails_found = _extract_emails(state["question"])
 
     if not emails_found:
         return {

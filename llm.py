@@ -17,6 +17,11 @@ def get_llm(temperature=0):
     temperature=0 means the model gives consistent, focused answers.
     Higher temperature (e.g. 0.7) would make it more creative/random.
     """
+    if not OPENAI_API_KEY:
+        raise RuntimeError(
+            "OPENAI_API_KEY is missing. Add it to your .env file and restart Streamlit."
+        )
+
     return ChatOpenAI(
         model=LLM_MODEL,
         temperature=temperature,

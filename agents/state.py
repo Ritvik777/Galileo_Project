@@ -12,4 +12,5 @@ class AgentState(TypedDict):
     answer: str                            # final response
     is_pricing: bool                       # is this a pricing question?
     user_email: str                        # verified email (or empty)
+    send_requested: bool                   # did user ask to send outreach?
     steps: Annotated[list[str], _merge]    # trace log

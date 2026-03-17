@@ -16,7 +16,7 @@ from agents.graph import graph
 def ask(question: str) -> dict:
     return graph.invoke({
         "question": question, "agent_type": "", "context": "", "answer": "",
-        "is_pricing": False, "user_email": "", "steps": [],
+        "is_pricing": False, "user_email": "", "send_requested": False, "steps": [],
     })
 
 

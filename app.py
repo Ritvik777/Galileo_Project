@@ -6,7 +6,9 @@ st.set_page_config(page_title="Galileo AI — Multi-Agent", page_icon="🚀", la
 
 st.markdown("""
 <style>
-    [data-testid="stSidebar"] { background: #0f1117; }
+    [data-testid="stSidebar"] {
+        background: var(--secondary-background-color);
+    }
     .agent-badge {
         display: inline-block;
         font-size: 12px;
@@ -18,8 +20,10 @@ st.markdown("""
     .badge-gtm { background: #059669; color: white; }
     .badge-outreach { background: #2563eb; color: white; }
     .trace-step {
-        background: #1a1c25;
+        background: var(--secondary-background-color);
+        color: var(--text-color);
         border-left: 3px solid #6366f1;
+        border: 1px solid rgba(128, 128, 128, 0.35);
         padding: 8px 14px;
         margin: 4px 0;
         border-radius: 0 6px 6px 0;
@@ -28,90 +32,182 @@ st.markdown("""
     }
     .hero-subtitle {
         font-size: 14px;
-        color: #8b8d98;
+        color: var(--text-color);
+        opacity: 0.78;
         margin-top: -10px;
         margin-bottom: 20px;
     }
     .stat-card {
-        background: #1a1c25;
-        border: 1px solid #23252f;
+        background: var(--secondary-background-color);
+        border: 1px solid rgba(128, 128, 128, 0.35);
         border-radius: 10px;
         padding: 16px;
         text-align: center;
     }
     .stat-number { font-size: 28px; font-weight: 700; color: #a78bfa; }
-    .stat-label { font-size: 12px; color: #8b8d98; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-label {
+        font-size: 12px;
+        color: var(--text-color);
+        opacity: 0.72;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "awaiting_email" not in st.session_state:
-    st.session_state.awaiting_email = False
-    st.session_state.pricing_question = ""
-if "pending_drafts" not in st.session_state:
-    st.session_state.pending_drafts = ""
 
 BADGES = {
     "gtm": ("🎯 GTM Agent", "badge-gtm"),
     "outreach": ("📝 Outreach Agent", "badge-outreach"),
 }
+SEND_WORDS = ["send", "market", "deliver", "mail them", "email them"]
 
-# ── Sidebar ──────────────────────────────────────────
 
-with st.sidebar:
-    st.markdown("## 🚀 Galileo Marketing AI")
-    st.caption("Multi-Agent RAG for GTM & Outreach")
-    st.divider()
+def initialize_session_state() -> None:
+    """Create simple defaults the first time the app runs."""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "awaiting_email" not in st.session_state:
+        st.session_state.awaiting_email = False
+    if "pricing_question" not in st.session_state:
+        st.session_state.pricing_question = ""
+    if "pending_drafts" not in st.session_state:
+        st.session_state.pending_drafts = ""
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{get_document_count()}</div>
-            <div class="stat-label">Docs in DB</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="stat-card">
-            <div class="stat-number">3</div>
-            <div class="stat-label">Agents</div>
-        </div>
-        """, unsafe_allow_html=True)
 
-    st.divider()
+def parse_lines(raw_text: str) -> list[str]:
+    """Turn textarea content into clean non-empty lines."""
+    return [line.strip() for line in raw_text.strip().split("\n") if line.strip()]
 
-    with st.expander("📄 Add Knowledge Base Docs", expanded=False):
-        text = st.text_area("Paste product docs, one per line:", height=140, placeholder="Paste your Galileo product docs here...")
-        if st.button("➕ Add Text", use_container_width=True):
-            lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
-            if lines:
-                with st.spinner("Embedding..."):
-                    count = add_documents(lines)
-                st.success(f"Added {count} chunks!")
-                st.rerun()
-            else:
-                st.warning("Paste some text first.")
 
-        pdf = st.file_uploader("Or upload a PDF", type=["pdf"], label_visibility="collapsed")
-        if pdf and st.button("📎 Add PDF", use_container_width=True):
-            with st.spinner("Processing..."):
-                count = add_documents([extract_text_from_pdf(pdf)])
-            st.success(f"Added {count} chunks!")
-            st.rerun()
+def user_is_asking_to_send(prompt: str) -> bool:
+    """Check if user wants to send drafted outreach emails."""
+    lower_prompt = prompt.lower()
+    return any(word in lower_prompt for word in SEND_WORDS)
 
-    with st.expander("🗺️ Agent Graph", expanded=False):
-        try:
-            st.image(get_graph_image())
-        except Exception:
-            st.code(
-                "classify ─┬─ gtm_retrieve → pricing_gate → gtm_generate\n"
-                "          └─ outreach_research → outreach_generate"
+
+def build_agent_question(prompt: str) -> str:
+    """Build the final question sent to the agent graph."""
+    if st.session_state.awaiting_email:
+        return f"{st.session_state.pricing_question} My email is {prompt}"
+
+    if st.session_state.pending_drafts and user_is_asking_to_send(prompt):
+        return (
+            f"{prompt}\n\n"
+            "Here are the drafted emails to send:\n"
+            f"{st.session_state.pending_drafts}"
+        )
+
+    return prompt
+
+
+def get_badge(agent_type: str) -> tuple[str, str]:
+    """Get UI label + CSS class for an agent."""
+    return BADGES.get(agent_type, (agent_type, "badge-gtm"))
+
+
+def render_trace(steps: list[str]) -> None:
+    """Show pipeline steps in a friendly expandable box."""
+    if not steps:
+        return
+    with st.expander("🔍 Pipeline Trace"):
+        for index, step in enumerate(steps, start=1):
+            st.markdown(
+                f'<div class="trace-step">Step {index}: {step}</div>',
+                unsafe_allow_html=True,
             )
 
-    with st.expander("🤖 How it works", expanded=False):
-        st.markdown("""
+
+def update_session_after_agent(prompt: str, result: dict) -> None:
+    """Store follow-up state for pricing flow and outreach drafts."""
+    if result.get("is_pricing") and not result.get("user_email"):
+        st.session_state.awaiting_email = True
+        if not st.session_state.pricing_question:
+            st.session_state.pricing_question = prompt
+    else:
+        st.session_state.awaiting_email = False
+        st.session_state.pricing_question = ""
+
+    if result.get("agent_type") == "outreach" and result.get("answer"):
+        st.session_state.pending_drafts = result["answer"]
+
+
+def save_assistant_message(result: dict) -> None:
+    """Save the assistant response to chat history."""
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": result.get("answer", ""),
+            "agent": result.get("agent_type", "gtm"),
+            "trace": result.get("steps", []),
+        }
+    )
+
+
+def render_sidebar(doc_count: int) -> None:
+    """Draw the left panel: stats, uploads, graph, and help."""
+    with st.sidebar:
+        st.markdown("## 🚀 Galileo Marketing AI")
+        st.caption("Multi-Agent RAG for GTM & Outreach")
+        st.divider()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(
+                f"""
+                <div class="stat-card">
+                    <div class="stat-number">{doc_count}</div>
+                    <div class="stat-label">Docs in DB</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with col2:
+            st.markdown(
+                """
+                <div class="stat-card">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Agents</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
+
+        with st.expander("📄 Add Knowledge Base Docs", expanded=False):
+            text_input = st.text_area(
+                "Paste product docs, one per line:",
+                height=140,
+                placeholder="Paste your Galileo product docs here...",
+            )
+            if st.button("➕ Add Text", use_container_width=True):
+                lines = parse_lines(text_input)
+                if lines:
+                    with st.spinner("Embedding..."):
+                        count = add_documents(lines)
+                    st.success(f"Added {count} chunks!")
+                    st.rerun()
+                else:
+                    st.warning("Paste some text first.")
+
+            pdf_file = st.file_uploader("Or upload a PDF", type=["pdf"], label_visibility="collapsed")
+            if pdf_file and st.button("📎 Add PDF", use_container_width=True):
+                with st.spinner("Processing..."):
+                    count = add_documents([extract_text_from_pdf(pdf_file)])
+                st.success(f"Added {count} chunks!")
+                st.rerun()
+
+        with st.expander("🗺️ Agent Graph", expanded=False):
+            try:
+                st.image(get_graph_image())
+            except Exception:
+                st.code(
+                    "classify ─┬─ gtm_retrieve → pricing_gate → gtm_generate\n"
+                    "          └─ outreach_research → outreach_generate"
+                )
+
+        with st.expander("🤖 How it works", expanded=False):
+            st.markdown("""
 **Router Agent** classifies your message:
 - Product / pricing question → **GTM Agent**
 - Content creation request → **Outreach Agent**
@@ -127,66 +223,70 @@ with st.sidebar:
 **Tools:** `search_knowledge_base` (Qdrant) · `web_search` (DuckDuckGo)
 """)
 
-    st.divider()
-    st.caption("Galileo AI · LangGraph · Qdrant · OpenAI")
+        st.divider()
+        st.caption("Galileo AI · LangGraph · Qdrant · OpenAI")
+
+
+def render_chat_history() -> None:
+    """Print all previous chat messages."""
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            agent_type = message.get("agent")
+            if agent_type:
+                label, css_class = get_badge(agent_type)
+                st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
+            st.markdown(message["content"])
+            render_trace(message.get("trace", []))
+
+
+def handle_new_prompt(prompt: str) -> None:
+    """Process one new user message end-to-end."""
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        question_for_agent = build_agent_question(prompt)
+        try:
+            with st.spinner("🔄 Routing to the right agent..."):
+                result = ask(question_for_agent)
+        except Exception as error:
+            error_text = str(error)
+            st.error(f"Setup issue: {error_text}")
+            save_assistant_message(
+                {
+                    "answer": f"Setup issue: {error_text}",
+                    "agent_type": "gtm",
+                    "steps": ["App Error → configuration needed"],
+                }
+            )
+            return
+
+        update_session_after_agent(prompt, result)
+
+        label, css_class = get_badge(result.get("agent_type", "gtm"))
+        st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
+        st.markdown(result.get("answer", ""))
+        render_trace(result.get("steps", []))
+
+    save_assistant_message(result)
+
+initialize_session_state()
+doc_count = get_document_count()
+
+render_sidebar(doc_count)
 
 # ── Main Chat ────────────────────────────────────────
 
 st.markdown("# 🚀 Galileo Marketing Assistant")
 st.markdown('<p class="hero-subtitle">Ask about Galileo products, compare with competitors, or generate marketing content — the right agent handles it.</p>', unsafe_allow_html=True)
 
-if not st.session_state.messages and get_document_count() == 0:
+if not st.session_state.messages and doc_count == 0:
     st.info("👈 Add Galileo product docs to the knowledge base first — expand **Add Knowledge Base Docs** in the sidebar.")
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if "agent" in msg:
-            label, css_class = BADGES.get(msg["agent"], (msg["agent"], "badge-gtm"))
-            st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        if "trace" in msg and msg["trace"]:
-            with st.expander("🔍 Pipeline Trace"):
-                for i, s in enumerate(msg["trace"], 1):
-                    st.markdown(f'<div class="trace-step">Step {i}: {s}</div>', unsafe_allow_html=True)
+render_chat_history()
 
-if prompt := st.chat_input("Ask about Galileo, or request marketing content..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        if st.session_state.awaiting_email:
-            question = f"{st.session_state.pricing_question} My email is {prompt}"
-        elif st.session_state.pending_drafts and any(kw in prompt.lower() for kw in ["send", "market", "deliver", "mail them", "email them"]):
-            question = f"{prompt}\n\nHere are the drafted emails to send:\n{st.session_state.pending_drafts}"
-        else:
-            question = prompt
-
-        with st.spinner("🔄 Routing to the right agent..."):
-            result = ask(question)
-
-        if result.get("is_pricing") and not result.get("user_email"):
-            st.session_state.awaiting_email = True
-            st.session_state.pricing_question = st.session_state.pricing_question or prompt
-        else:
-            st.session_state.awaiting_email = False
-            st.session_state.pricing_question = ""
-
-        if result.get("agent_type") == "outreach" and result.get("answer"):
-            st.session_state.pending_drafts = result["answer"]
-
-        label, css_class = BADGES.get(result["agent_type"], (result["agent_type"], "badge-gtm"))
-        st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
-        st.markdown(result["answer"])
-
-        if result["steps"]:
-            with st.expander("🔍 Pipeline Trace"):
-                for i, s in enumerate(result["steps"], 1):
-                    st.markdown(f'<div class="trace-step">Step {i}: {s}</div>', unsafe_allow_html=True)
-
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": result["answer"],
-        "agent": result["agent_type"],
-        "trace": result["steps"],
-    })
+new_prompt = st.chat_input("Ask about Galileo, or request marketing content...")
+if new_prompt:
+    handle_new_prompt(new_prompt)
