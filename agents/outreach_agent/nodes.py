@@ -1,12 +1,3 @@
-"""
-Outreach Agent
-===============
-Finds leads via Apollo, creates personalized drafts, sends ONLY when user says "send".
-
-Nodes: outreach_research → outreach_generate → send_gate ─┬─ send → outreach_send → END
-                                                           └─ review → END (show drafts)
-"""
-
 import re
 from agents.state import AgentState
 from llm import get_llm
@@ -36,7 +27,6 @@ def outreach_research(state: AgentState) -> dict:
     q = state["question"]
 
     if _wants_leads(q):
-        # User wants leads → MUST call Apollo + knowledge base
         ctx, log = call_tools(
             q,
             tools=[apollo_search, search_knowledge_base],
@@ -49,7 +39,6 @@ def outreach_research(state: AgentState) -> dict:
             ),
         )
     else:
-        # User wants content → knowledge base + web
         ctx, log = call_tools(
             q,
             tools=[search_knowledge_base, web_search],

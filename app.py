@@ -63,50 +63,13 @@ SEND_WORDS = ["send", "market", "deliver", "mail them", "email them"]
 
 
 def initialize_session_state() -> None:
-    """Create simple defaults the first time the app runs."""
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "awaiting_email" not in st.session_state:
-        st.session_state.awaiting_email = False
-    if "pricing_question" not in st.session_state:
-        st.session_state.pricing_question = ""
-    if "pending_drafts" not in st.session_state:
-        st.session_state.pending_drafts = ""
-
-
-def parse_lines(raw_text: str) -> list[str]:
-    """Turn textarea content into clean non-empty lines."""
-    return [line.strip() for line in raw_text.strip().split("\n") if line.strip()]
-
-
-def user_is_asking_to_send(prompt: str) -> bool:
-    """Check if user wants to send drafted outreach emails."""
-    lower_prompt = prompt.lower()
-    return any(word in lower_prompt for word in SEND_WORDS)
-
-
-def build_agent_question(prompt: str) -> str:
-    """Build the final question sent to the agent graph."""
-    if st.session_state.awaiting_email:
-        return f"{st.session_state.pricing_question} My email is {prompt}"
-
-    if st.session_state.pending_drafts and user_is_asking_to_send(prompt):
-        return (
-            f"{prompt}\n\n"
-            "Here are the drafted emails to send:\n"
-            f"{st.session_state.pending_drafts}"
-        )
-
-    return prompt
-
-
-def get_badge(agent_type: str) -> tuple[str, str]:
-    """Get UI label + CSS class for an agent."""
-    return BADGES.get(agent_type, (agent_type, "badge-gtm"))
+    st.session_state.setdefault("messages", [])
+    st.session_state.setdefault("awaiting_email", False)
+    st.session_state.setdefault("pricing_question", "")
+    st.session_state.setdefault("pending_drafts", "")
 
 
 def render_trace(steps: list[str]) -> None:
-    """Show pipeline steps in a friendly expandable box."""
     if not steps:
         return
     with st.expander("🔍 Pipeline Trace"):
@@ -117,34 +80,7 @@ def render_trace(steps: list[str]) -> None:
             )
 
 
-def update_session_after_agent(prompt: str, result: dict) -> None:
-    """Store follow-up state for pricing flow and outreach drafts."""
-    if result.get("is_pricing") and not result.get("user_email"):
-        st.session_state.awaiting_email = True
-        if not st.session_state.pricing_question:
-            st.session_state.pricing_question = prompt
-    else:
-        st.session_state.awaiting_email = False
-        st.session_state.pricing_question = ""
-
-    if result.get("agent_type") == "outreach" and result.get("answer"):
-        st.session_state.pending_drafts = result["answer"]
-
-
-def save_assistant_message(result: dict) -> None:
-    """Save the assistant response to chat history."""
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": result.get("answer", ""),
-            "agent": result.get("agent_type", "gtm"),
-            "trace": result.get("steps", []),
-        }
-    )
-
-
 def render_sidebar(doc_count: int) -> None:
-    """Draw the left panel: stats, uploads, graph, and help."""
     with st.sidebar:
         st.markdown("## 🚀 Galileo Marketing AI")
         st.caption("Multi-Agent RAG for GTM & Outreach")
@@ -181,7 +117,7 @@ def render_sidebar(doc_count: int) -> None:
                 placeholder="Paste your Galileo product docs here...",
             )
             if st.button("➕ Add Text", use_container_width=True):
-                lines = parse_lines(text_input)
+                lines = [line.strip() for line in text_input.strip().split("\n") if line.strip()]
                 if lines:
                     with st.spinner("Embedding..."):
                         count = add_documents(lines)
@@ -228,49 +164,71 @@ def render_sidebar(doc_count: int) -> None:
 
 
 def render_chat_history() -> None:
-    """Print all previous chat messages."""
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             agent_type = message.get("agent")
             if agent_type:
-                label, css_class = get_badge(agent_type)
+                label, css_class = BADGES.get(agent_type, (agent_type, "badge-gtm"))
                 st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
             st.markdown(message["content"])
             render_trace(message.get("trace", []))
 
 
 def handle_new_prompt(prompt: str) -> None:
-    """Process one new user message end-to-end."""
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        question_for_agent = build_agent_question(prompt)
+        question_for_agent = prompt
+        if st.session_state.awaiting_email:
+            question_for_agent = f"{st.session_state.pricing_question} My email is {prompt}"
+        elif st.session_state.pending_drafts and any(word in prompt.lower() for word in SEND_WORDS):
+            question_for_agent = (
+                f"{prompt}\n\n"
+                "Here are the drafted emails to send:\n"
+                f"{st.session_state.pending_drafts}"
+            )
+
         try:
             with st.spinner("🔄 Routing to the right agent..."):
                 result = ask(question_for_agent)
         except Exception as error:
             error_text = str(error)
             st.error(f"Setup issue: {error_text}")
-            save_assistant_message(
-                {
-                    "answer": f"Setup issue: {error_text}",
-                    "agent_type": "gtm",
-                    "steps": ["App Error → configuration needed"],
-                }
-            )
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"Setup issue: {error_text}",
+                "agent": "gtm",
+                "trace": ["App Error → configuration needed"],
+            })
             return
 
-        update_session_after_agent(prompt, result)
+        if result.get("is_pricing") and not result.get("user_email"):
+            st.session_state.awaiting_email = True
+            if not st.session_state.pricing_question:
+                st.session_state.pricing_question = prompt
+        else:
+            st.session_state.awaiting_email = False
+            st.session_state.pricing_question = ""
 
-        label, css_class = get_badge(result.get("agent_type", "gtm"))
+        if result.get("agent_type") == "outreach" and result.get("answer"):
+            st.session_state.pending_drafts = result["answer"]
+
+        label, css_class = BADGES.get(result.get("agent_type", "gtm"), ("gtm", "badge-gtm"))
         st.markdown(f'<span class="agent-badge {css_class}">{label}</span>', unsafe_allow_html=True)
         st.markdown(result.get("answer", ""))
         render_trace(result.get("steps", []))
 
-    save_assistant_message(result)
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": result.get("answer", ""),
+            "agent": result.get("agent_type", "gtm"),
+            "trace": result.get("steps", []),
+        }
+    )
 
 initialize_session_state()
 doc_count = get_document_count()

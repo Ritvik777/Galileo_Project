@@ -1,15 +1,9 @@
-"""
-GTM (Go-To-Market) Agent
-=========================
-Answers product questions. If about pricing → asks for email first.
-
-Nodes: gtm_retrieve → pricing_gate → collect_email → gtm_generate
-"""
-
 import re
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, call_tools
+
+EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
 def gtm_retrieve(state: AgentState) -> dict:
@@ -26,8 +20,7 @@ def gtm_retrieve(state: AgentState) -> dict:
 
 
 def pricing_gate(state: AgentState) -> dict:
-    llm = get_llm(temperature=0)
-    resp = llm.invoke(
+    resp = get_llm(temperature=0).invoke(
         "Does this question ask about pricing, cost, or plans? "
         "Reply ONLY 'yes' or 'no'.\n\n"
         f"Question: {state['question']}\nAnswer:"
@@ -42,7 +35,7 @@ def route_pricing(state: AgentState) -> str:
 
 
 def collect_email(state: AgentState) -> dict:
-    match = re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', state["question"])
+    match = re.search(EMAIL_PATTERN, state["question"])
     if not match:
         return {
             "user_email": "",
