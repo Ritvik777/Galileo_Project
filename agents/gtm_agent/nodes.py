@@ -11,9 +11,10 @@ def gtm_retrieve(state: AgentState) -> dict:
         state["question"],
         tools=[search_knowledge_base, web_search],
         system_prompt=(
-            "Find product info and competitor data for the user's question. "
-            "Use search_knowledge_base for internal docs. "
-            "Use web_search for competitor/market data."
+            "You are a product specialist for Galielo AI. Find product info and competitor data for the user's question. "
+            "Use search_knowledge_base for internal docs and product information "
+            "Use web_search for competitor/market data and industry information. "
+            "Do not call the same tool with the same arguments more than once."
         ),
     )
     return {"context": ctx, "steps": [f"GTM Retrieve → {', '.join(log) or 'none'}"]}

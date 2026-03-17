@@ -2,6 +2,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from vector_db import search_with_scores
 from llm import get_llm
+import json
 
 
 @tool
@@ -17,14 +18,19 @@ def search_knowledge_base(query: str) -> str:
 def web_search(query: str) -> str:
     """Search the live web via DuckDuckGo."""
     from duckduckgo_search import DDGS
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=3))
-        if not results:
-            return "No web results found."
-        return "\n\n".join(f"**{r['title']}**\n{r['body']}" for r in results)
-    except Exception as e:
-        return f"Web search failed: {e}"
+    errors = []
+    for backend in ("html", "lite"):
+        try:
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=3, backend=backend))
+            if not results:
+                continue
+            return "\n\n".join(f"**{r['title']}**\n{r['body']}" for r in results)
+        except Exception as e:
+            errors.append(f"{backend}: {e}")
+    if errors:
+        return "WEB_SEARCH_UNAVAILABLE: " + " | ".join(errors)
+    return "No web results found."
 
 
 @tool
@@ -145,12 +151,18 @@ def call_tools(question, tools, system_prompt):
     msgs = [SystemMessage(content=system_prompt), HumanMessage(content=question)]
 
     log = []
+    seen_calls = set()
     for _ in range(3):
         resp = llm.invoke(msgs)
         msgs.append(resp)
         if not resp.tool_calls:
             break
         for tc in resp.tool_calls:
+            signature = f"{tc['name']}::{json.dumps(tc.get('args', {}), sort_keys=True, default=str)}"
+            if signature in seen_calls:
+                msgs.append(ToolMessage(content="Skipped duplicate tool call.", tool_call_id=tc["id"]))
+                continue
+            seen_calls.add(signature)
             out = tool_map[tc["name"]].invoke(tc["args"])
             log.append(tc["name"])
             msgs.append(ToolMessage(content=str(out), tool_call_id=tc["id"]))
