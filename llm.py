@@ -1,21 +1,26 @@
 """
-llm.py — OpenAI Language Model
+llm.py — Language Model Router
 The "brain" that reads text and generates answers.
 """
-from langchain_openai import ChatOpenAI
-from config import OPENAI_API_KEY, LLM_MODEL
+from config import (
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL,
+)
+
 
 def get_llm(temperature=0.7):
-    """
-    Create and return the OpenAI chat model.
-    """
-    if not OPENAI_API_KEY:
+    if not ANTHROPIC_API_KEY:
         raise RuntimeError(
-            "OPENAI_API_KEY is missing. Add it to your .env file and restart Streamlit."
+            "ANTHROPIC_API_KEY is missing. Add it to your .env file and restart Streamlit."
         )
-
-    return ChatOpenAI(
-        model=LLM_MODEL,
+    try:
+        from langchain_anthropic import ChatAnthropic
+    except ImportError as exc:
+        raise RuntimeError(
+            "langchain-anthropic is not installed. Run: pip install langchain-anthropic"
+        ) from exc
+    return ChatAnthropic(
+        model=ANTHROPIC_MODEL,
         temperature=temperature,
-        openai_api_key=OPENAI_API_KEY,
+        anthropic_api_key=ANTHROPIC_API_KEY,
     )

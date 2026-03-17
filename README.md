@@ -22,7 +22,7 @@ RAG/
 │
 ├── config.py        ← All settings and API keys (the only file you configure)
 ├── embeddings.py    ← Google Gemini embedding model (text → vectors)
-├── llm.py           ← OpenAI GPT-4o-mini (generates text)
+├── llm.py           ← Anthropic Claude Sonnet 4 (generates text)
 ├── chunker.py       ← Text chunking + PDF extraction
 ├── database.py      ← Qdrant: connect, store, and search documents
 │
@@ -69,7 +69,7 @@ Vector similarity search often returns documents that are *similar* but not *rel
 |-----------|-----------|
 | Vector Database | Qdrant Cloud |
 | Embeddings | Google Gemini (`gemini-embedding-001`, 3072-dim) |
-| LLM | OpenAI GPT-4o-mini |
+| LLM | Anthropic Claude Sonnet 4 |
 | Orchestration | LangGraph (conditional edges, typed state) |
 | Web Fallback | DuckDuckGo Search (no API key needed) |
 | UI | Streamlit (chat interface, pipeline trace) |
@@ -93,7 +93,7 @@ streamlit run app.py
 | Key | Where to get it |
 |-----|----------------|
 | `GOOGLE_API_KEY` | [Google AI Studio](https://makersuite.google.com/app/apikey) |
-| `OPENAI_API_KEY` | [OpenAI Platform](https://platform.openai.com/api-keys) |
+| `ANTHROPIC_API_KEY` | [Anthropic Console](https://console.anthropic.com/) |
 | `QDRANT_URL` | [Qdrant Cloud](https://cloud.qdrant.io/) |
 | `QDRANT_API_KEY` | Qdrant Cloud dashboard → API Keys |
 
