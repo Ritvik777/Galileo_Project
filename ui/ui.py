@@ -171,19 +171,25 @@ def _render_doc_upload() -> None:
         )
         if st.button("➕ Add Text", use_container_width=True):
             if text_input.strip():
-                with st.spinner("Embedding..."):
-                    count = add_text_documents(text_input)
-                st.success(f"Added {count} chunks!")
-                st.rerun()
+                try:
+                    with st.spinner("Embedding..."):
+                        count = add_text_documents(text_input)
+                    st.success(f"Added {count} chunks!")
+                    st.rerun()
+                except Exception as error:
+                    st.error(f"Could not add text documents: {error}")
             else:
                 st.warning("Paste some text first.")
 
         pdf_file = st.file_uploader("Or upload a PDF", type=["pdf"], label_visibility="collapsed")
         if pdf_file and st.button("📎 Add PDF", use_container_width=True):
-            with st.spinner("Processing..."):
-                count = add_pdf_document(pdf_file)
-            st.success(f"Added {count} chunks!")
-            st.rerun()
+            try:
+                with st.spinner("Processing..."):
+                    count = add_pdf_document(pdf_file)
+                st.success(f"Added {count} chunks!")
+                st.rerun()
+            except Exception as error:
+                st.error(f"Could not add PDF: {error}")
 
 
 def _render_graph() -> None:

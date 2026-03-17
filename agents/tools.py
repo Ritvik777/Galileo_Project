@@ -147,13 +147,19 @@ def send_email(to_email: str, subject: str, html_body: str) -> str:
 def call_tools(question, tools, system_prompt):
     """LLM picks which tools to call, runs them, returns results."""
     tool_map = {t.name: t for t in tools}
-    llm = get_llm().bind_tools(tools)
+    try:
+        llm = get_llm().bind_tools(tools)
+    except Exception as exc:
+        return f"LLM_UNAVAILABLE: {exc}", []
     msgs = [SystemMessage(content=system_prompt), HumanMessage(content=question)]
 
     log = []
     seen_calls = set()
     for _ in range(3):
-        resp = llm.invoke(msgs)
+        try:
+            resp = llm.invoke(msgs)
+        except Exception as exc:
+            return f"LLM_ERROR: {exc}", log
         msgs.append(resp)
         if not resp.tool_calls:
             break
@@ -163,7 +169,10 @@ def call_tools(question, tools, system_prompt):
                 msgs.append(ToolMessage(content="Skipped duplicate tool call.", tool_call_id=tc["id"]))
                 continue
             seen_calls.add(signature)
-            out = tool_map[tc["name"]].invoke(tc["args"])
+            try:
+                out = tool_map[tc["name"]].invoke(tc["args"])
+            except Exception as exc:
+                out = f"TOOL_ERROR[{tc['name']}]: {exc}"
             log.append(tc["name"])
             msgs.append(ToolMessage(content=str(out), tool_call_id=tc["id"]))
 
