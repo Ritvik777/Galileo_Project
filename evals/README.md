@@ -18,7 +18,7 @@ This folder contains a baseline evaluation suite for the multi-agent app.
 
 ## Dataset size
 
-The suite uses 12 synthetic examples in `run_galileo_evals.py`.
+The suite uses 15 synthetic examples in `run_galileo_evals.py`.
 
 ## Run
 
@@ -30,6 +30,9 @@ The suite uses 12 synthetic examples in `run_galileo_evals.py`.
    - `pip install -r requirements.txt`
 3. Run:
    - `python evals/run_galileo_evals.py`
+   - Default mode logs each use case as a separate Galileo session.
+   - To run as a Galileo Experiment instead:
+     - `GALILEO_EVAL_MODE=experiment python evals/run_galileo_evals.py`
 
 Optional:
 - `GALILEO_EXPERIMENT_NAME` to override the default experiment name.
