@@ -1,106 +1,162 @@
-# Self-Corrective RAG with LangGraph
+# Galileo Marketing Assistant (Multi-Agent LangGraph)
 
-**[Read the full walkthrough blog post](https://ritvik777.github.io/Introduction-to-RAG/)**
+This repository is a **multi-agent marketing assistant** built with LangGraph.
 
-A portfolio-grade Retrieval-Augmented Generation app that demonstrates **agentic AI patterns** — conditional routing, self-correction, and observability — using LangGraph.
+- Router decides between **GTM** and **Outreach** behavior
+- GTM branch answers product and pricing questions
+- Outreach branch creates content, finds leads, and can send emails
+- Full observability with Galileo tracing/session support
 
-## Architecture
+Project explainer page (GitHub Pages): `index.html`
 
-Unlike basic RAG (`retrieve → generate`), this pipeline **self-corrects** by grading documents for relevance and falling back to web search when needed:
+---
 
-```
-START → rewrite_query → retrieve → grade_documents ─┬─ relevant     → generate → END
-                                                     └─ not relevant → websearch_fallback → generate → END
-```
+## Architecture (Current)
 
-## Project Structure — One File Per Concern
+### Graph flow
 
-Each file does **one thing**, making the codebase easy to read and explain:
-
-```
-RAG/
-│
-├── config.py        ← All settings and API keys (the only file you configure)
-├── embeddings.py    ← Google Gemini embedding model (text → vectors)
-├── llm.py           ← Anthropic Claude Sonnet 4 (generates text)
-├── chunker.py       ← Text chunking + PDF extraction
-├── database.py      ← Qdrant: connect, store, and search documents
-│
-├── state.py         ← RAGState definition (data flowing through the graph)
-├── nodes.py         ← The 5 LangGraph node functions
-├── graph.py         ← Wires nodes into the LangGraph pipeline
-│
-├── app.py           ← Streamlit UI (chat, PDF upload, pipeline trace)
-│
-├── requirements.txt
-├── .env             ← Your API keys (not committed to git)
-├── .env.example     ← Template showing which keys you need
-└── .gitignore
+```text
+START -> classify
+          |- gtm      -> gtm_retrieve -> pricing_gate --not_pricing--> gtm_generate -> END
+          |                                         \--pricing-------> collect_email --valid--> gtm_generate -> END
+          |                                                                            \--no_email----------> END
+          |
+          \- outreach -> outreach_research -> outreach_generate -> send_gate --review--> END
+                                                                     \--send------------> outreach_send -> END
 ```
 
-### How to read the code (recommended order)
+### Agents
 
-1. **`config.py`** — See what settings exist
-2. **`embeddings.py`** + **`llm.py`** — The two AI models (one line each)
-3. **`chunker.py`** — How text gets split into small pieces
-4. **`database.py`** — How documents get stored and searched in Qdrant
-5. **`state.py`** — The "form" that flows through the pipeline
-6. **`nodes.py`** — The 5 steps of the pipeline (the core logic)
-7. **`graph.py`** — How the 5 nodes are wired together
-8. **`app.py`** — The user interface
+- **Router Agent** (`agents/router_agent/nodes.py`)
+  - Uses rule-based hints first, then LLM fallback
+  - Routes to `gtm` or `outreach`
 
-## Pipeline Nodes
+- **GTM Agent** (`agents/gtm_agent/nodes.py`)
+  - Retrieves context from internal KB + web
+  - Pricing gate requires verified email before full pricing output
+  - Generates final product/pricing response
 
-| # | Node | What it does |
-|---|------|-------------|
-| 1 | **rewrite_query** | LLM rewrites the question for better vector search |
-| 2 | **retrieve** | Searches Qdrant for the 4 most similar document chunks |
-| 3 | **grade_documents** | LLM grades each document as relevant or irrelevant |
-| 4 | **websearch_fallback** | If no relevant docs, searches the web via DuckDuckGo |
-| 5 | **generate** | LLM generates the final answer from the best available context |
+- **Outreach Agent** (`agents/outreach_agent/nodes.py`)
+  - Researches context (and uses Apollo for lead-intent prompts)
+  - Generates marketing content (email/post)
+  - Send gate determines review-only vs actual send via SendGrid
 
-### Why self-corrective?
+### Shared state
 
-Vector similarity search often returns documents that are *similar* but not *relevant*. The LLM grading step filters out false positives. If all documents fail grading, the pipeline falls back to web search instead of generating a bad answer.
+Defined in `agents/state.py`:
 
-## Tech Stack
+- `question`
+- `agent_type`
+- `context`
+- `answer`
+- `is_pricing`
+- `user_email`
+- `send_requested`
+- `steps` (merged pipeline trace)
+
+---
+
+## Key files
+
+```text
+app.py                          # Streamlit entrypoint
+ui/ui.py                        # Sidebar, chat, trace rendering
+agents/graph.py                 # LangGraph node wiring
+agents/router_agent/nodes.py    # classify + route
+agents/gtm_agent/nodes.py       # GTM branch nodes
+agents/outreach_agent/nodes.py  # Outreach branch nodes
+agents/tools.py                 # KB/web/Apollo/SendGrid tools + tool loop
+vector_db/database.py           # Qdrant store/search and collection checks
+vector_db/chunker.py            # text/pdf chunking
+vector_db/embeddings.py         # Gemini embeddings model
+observability/galileo.py        # tracing/session setup
+evals/run_galileo_evals.py      # baseline evaluation suite
+```
+
+---
+
+## Tech stack
 
 | Component | Technology |
-|-----------|-----------|
-| Vector Database | Qdrant Cloud |
-| Embeddings | Google Gemini (`gemini-embedding-001`, 3072-dim) |
-| LLM | Anthropic Claude Sonnet 4 |
-| Orchestration | LangGraph (conditional edges, typed state) |
-| Web Fallback | DuckDuckGo Search (no API key needed) |
-| UI | Streamlit (chat interface, pipeline trace) |
+|---|---|
+| Orchestration | LangGraph |
+| LLM | Anthropic (`ChatAnthropic`) |
+| Embeddings | Google Gemini embeddings (`gemini-embedding-001`) |
+| Vector DB | Qdrant Cloud |
+| Web Search | DuckDuckGo |
+| Leads | Apollo API |
+| Email | SendGrid |
+| UI | Streamlit |
+| Observability / Evals | Galileo |
 
-## Setup
+---
+
+## Setup and run
+
+### 1) Install dependencies
 
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
+```
 
-# 2. Copy env template and add your API keys
+### 2) Configure environment
+
+```bash
 cp .env.example .env
-# Edit .env with your actual keys
+```
 
-# 3. Run the app
+Fill `.env` with your values:
+
+- Core:
+  - `GOOGLE_API_KEY`
+  - `ANTHROPIC_API_KEY`
+  - `QDRANT_URL`
+  - `QDRANT_API_KEY`
+- Optional outreach features:
+  - `APOLLO_API_KEY`
+  - `SENDGRID_API_KEY`
+  - `SENDGRID_FROM_EMAIL`
+- Observability/evals:
+  - `GALILEO_API_KEY`
+  - `GALILEO_PROJECT`
+  - `GALILEO_LOG_STREAM`
+
+### 3) Start app
+
+```bash
 streamlit run app.py
 ```
 
-## Required API Keys
+---
 
-| Key | Where to get it |
-|-----|----------------|
-| `GOOGLE_API_KEY` | [Google AI Studio](https://makersuite.google.com/app/apikey) |
-| `ANTHROPIC_API_KEY` | [Anthropic Console](https://console.anthropic.com/) |
-| `QDRANT_URL` | [Qdrant Cloud](https://cloud.qdrant.io/) |
-| `QDRANT_API_KEY` | Qdrant Cloud dashboard → API Keys |
+## Evaluations
 
-## UI Features
+Run baseline eval suite:
 
-- **Chat interface** with message history
-- **PDF upload** with automatic text extraction and chunking
-- **Pipeline trace** — expand any answer to see every step the graph took
-- **LangGraph visualization** rendered in the sidebar
-- **Live document count** from Qdrant
+```bash
+python evals/run_galileo_evals.py
+```
+
+Experiment mode:
+
+```bash
+GALILEO_EVAL_MODE=experiment python evals/run_galileo_evals.py
+```
+
+See full eval documentation in `evals/README.md`.
+
+---
+
+## GitHub Pages (branch deploy)
+
+This repo uses root `index.html` for docs page.
+
+In GitHub settings:
+
+- Pages source: **Deploy from a branch**
+- Branch: `main`
+- Folder: `/(root)`
+
+Then open:
+
+- `https://ritvik777.github.io/Galileo_Project/`

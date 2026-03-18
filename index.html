@@ -3,171 +3,216 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Galileo Marketing Assistant - Story Mode</title>
-  <meta name="description" content="A visual, beginner-friendly explanation of the Galileo multi-agent architecture, nodes, graph routes, tools, and evals.">
+  <title>Galileo Marketing Assistant - Technical Walkthrough</title>
+  <meta name="description" content="A beginner-friendly explanation of the Galileo multi-agent architecture, graph routing, tools, and evaluations.">
   <style>
-    @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap");
+    @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
 
     :root {
-      --bg: #05080f;
-      --ink: #ebf1ff;
-      --muted: #a8b4cc;
-      --panel: rgba(18, 24, 38, 0.82);
-      --panel-solid: #101828;
-      --line: rgba(136, 156, 192, 0.34);
-      --neon: #66e2ff;
-      --pink: #e46fff;
-      --lime: #8cf292;
-      --amber: #f6c26f;
-      --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+      --bg: #070910;
+      --bg-2: #090c16;
+      --surface: #0e1222;
+      --surface-2: #0b1020;
+      --ink: #eef2ff;
+      --text: #c4cbe3;
+      --muted: #9aa5c8;
+      --line: #1f2a46;
+      --line-soft: #253255;
+      --node: #121935;
+      --purple: #7d7dfc;
+      --green: #6af39a;
+      --amber: #ffbe58;
+      --pink: #ff5ea8;
+      --shadow: 0 16px 48px rgba(1, 2, 8, 0.46);
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      font-family: "Outfit", "Segoe UI", sans-serif;
-      color: var(--ink);
+      font-family: "Manrope", "Segoe UI", sans-serif;
       background:
-        radial-gradient(1000px 500px at 15% -10%, rgba(102, 226, 255, 0.22), transparent 60%),
-        radial-gradient(900px 500px at 95% 0%, rgba(228, 111, 255, 0.2), transparent 62%),
-        linear-gradient(180deg, #070b14 0%, #05080f 50%, #060a12 100%);
-      line-height: 1.56;
-      min-height: 100vh;
+        radial-gradient(1100px 340px at 50% -12%, rgba(125, 125, 252, 0.2), transparent 64%),
+        radial-gradient(900px 280px at 50% -4%, rgba(106, 243, 154, 0.08), transparent 66%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.72;
     }
 
-    .noise {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.06;
-      background-image:
-        radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.55) 1px, transparent 0);
-      background-size: 4px 4px;
-      z-index: 0;
-    }
-
-    .wrap {
-      position: relative;
-      z-index: 1;
-      width: min(1160px, 94vw);
+    .container {
+      width: min(1020px, 92vw);
       margin: 0 auto;
-      padding: 28px 0 72px;
+      padding: 56px 0 104px;
     }
-
-    h1, h2, h3 { margin: 0; letter-spacing: -0.02em; }
-    h1 { font-size: clamp(2rem, 5.5vw, 4rem); line-height: 1.05; }
-    h2 { font-size: clamp(1.25rem, 2.6vw, 2rem); margin-bottom: 10px; }
-    h3 { font-size: 1.06rem; margin-bottom: 8px; }
-    p { margin: 0 0 10px; color: var(--muted); }
 
     .hero {
-      position: relative;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: linear-gradient(145deg, rgba(20, 29, 46, 0.9), rgba(12, 18, 30, 0.88));
-      box-shadow: var(--shadow);
-      padding: clamp(24px, 4vw, 40px);
-      margin-bottom: 14px;
-    }
-    .hero::after {
-      content: "";
-      position: absolute;
-      width: 360px;
-      height: 360px;
-      right: -90px;
-      top: -120px;
-      background: radial-gradient(circle, rgba(102, 226, 255, 0.33), transparent 70%);
-      filter: blur(4px);
-    }
-    .hero-sub {
-      max-width: 720px;
-      font-size: 1.04rem;
-    }
-    .tag-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .tag {
-      border: 1px solid rgba(132, 154, 200, 0.35);
-      background: rgba(14, 22, 35, 0.7);
-      border-radius: 999px;
-      font-size: 0.82rem;
-      padding: 6px 11px;
-      color: #d8e4ff;
-    }
-    .tiny-note {
-      display: inline-block;
-      margin-top: 12px;
-      font-size: 0.83rem;
-      color: #c7d7ff;
-      text-decoration: none;
-      border-bottom: 1px dashed rgba(199, 215, 255, 0.6);
+      text-align: center;
+      padding: 30px 20px 6px;
+      margin-bottom: 26px;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 12px;
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #bcc4ef;
+      background: rgba(125, 125, 252, 0.12);
+      border: 1px solid rgba(125, 125, 252, 0.28);
+      border-radius: 999px;
+      padding: 5px 12px;
+      margin-bottom: 14px;
     }
-    .card {
+
+    h1, h2, h3 { margin: 0; line-height: 1.2; letter-spacing: -0.02em; }
+    h1 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(2.3rem, 6vw, 4.2rem);
+      color: #f4f6ff;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    h2 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: clamp(1.8rem, 3.7vw, 2.7rem);
+      margin-bottom: 14px;
+      color: #f2f5ff;
+      text-align: center;
+    }
+    h3 {
+      font-size: 1.06rem;
+      margin-bottom: 8px;
+      color: #edf1ff;
+    }
+    p { margin: 0 0 12px; color: var(--text); }
+
+    .lead {
+      font-size: 1.05rem;
+      max-width: 760px;
+      color: #b6bfdf;
+      margin: 0 auto 18px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .chip {
+      border: 1px solid var(--line-soft);
+      background: rgba(16, 23, 45, 0.86);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #d5ddfa;
+    }
+
+    .source-link {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 0.88rem;
+      color: #9db6ff;
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(157, 182, 255, 0.6);
+    }
+
+    .section {
+      background: linear-gradient(180deg, var(--surface), var(--surface-2));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: clamp(26px, 4vw, 36px);
+      box-shadow: var(--shadow);
+      margin-top: 18px;
+    }
+
+    .spaced { margin-top: 30px; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0 10px;
+    }
+    .kpi {
       border: 1px solid var(--line);
       border-radius: 18px;
-      background: var(--panel);
-      backdrop-filter: blur(4px);
-      box-shadow: var(--shadow);
-      padding: 16px;
+      padding: 18px;
+      background: rgba(13, 18, 34, 0.85);
     }
-    .kpi { grid-column: span 3; }
     .kpi strong {
       display: block;
       font-size: 2rem;
+      color: #f1f5ff;
       line-height: 1;
-      margin-bottom: 6px;
-      color: #ffffff;
+      margin-bottom: 8px;
     }
-    .kpi span { color: #b6c5e0; font-size: 0.9rem; }
+    .kpi span {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
 
-    .full { grid-column: span 12; }
-    .half { grid-column: span 6; }
-    .third { grid-column: span 4; }
-    @media (max-width: 920px) {
-      .kpi, .half, .third { grid-column: span 12; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 960px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(15, 20, 38, 0.9);
+      padding: 18px;
+    }
+
+    .panel-gtm {
+      border-left: 4px solid var(--green);
+    }
+    .panel-outreach {
+      border-left: 4px solid var(--purple);
     }
 
     .mono {
-      font-family: "DM Mono", ui-monospace, monospace;
-      background: rgba(14, 21, 33, 0.75);
-      border: 1px solid rgba(134, 164, 218, 0.4);
-      border-radius: 9px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.85rem;
+      background: #10182e;
+      border: 1px solid #24335a;
+      border-radius: 7px;
       padding: 2px 7px;
-      color: #d7e4ff;
-      font-size: 0.87rem;
+      color: #dbe4ff;
     }
-    ul { margin: 8px 0 0 18px; color: #b6c5e0; }
-    li { margin-bottom: 6px; }
 
-    .story {
-      border-left: 3px solid rgba(102, 226, 255, 0.7);
-      padding-left: 12px;
-      margin-top: 8px;
-    }
+    ul { margin: 8px 0 0 20px; color: var(--text); }
+    li { margin-bottom: 6px; }
 
     .legend {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
       font-size: 0.84rem;
-      color: #b6c5e0;
-      margin: 3px 0 10px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      justify-content: center;
     }
     .dot {
       width: 10px;
       height: 10px;
-      border-radius: 99px;
+      border-radius: 999px;
       display: inline-block;
       margin-right: 6px;
       vertical-align: middle;
@@ -175,140 +220,142 @@
 
     .controls {
       display: flex;
-      gap: 9px;
+      gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 11px;
+      margin-bottom: 14px;
+      justify-content: center;
     }
     .controls button {
-      border: 1px solid rgba(137, 166, 218, 0.45);
-      background: rgba(13, 22, 36, 0.75);
-      color: #d5e2ff;
-      border-radius: 12px;
+      border: 1px solid #2e3f6b;
+      border-radius: 10px;
+      background: #111a30;
+      color: #e2e8ff;
       padding: 8px 12px;
-      cursor: pointer;
+      font-size: 0.9rem;
       font-family: inherit;
-      font-size: 0.89rem;
-      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      cursor: pointer;
+      transition: all 120ms ease;
     }
     .controls button:hover {
+      border-color: #5f80d8;
+      background: #162341;
       transform: translateY(-1px);
-      border-color: rgba(169, 194, 242, 0.8);
-      background: rgba(18, 30, 48, 0.92);
     }
+
     .graph-wrap {
-      border-radius: 16px;
-      border: 1px solid rgba(129, 157, 205, 0.4);
-      background: linear-gradient(145deg, rgba(9, 14, 24, 0.85), rgba(11, 17, 30, 0.9));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      background: #0b1122;
       overflow: auto;
-      padding: 10px;
     }
-    svg { width: 100%; min-width: 940px; height: auto; }
+    svg { width: 100%; min-width: 930px; height: auto; }
+
     .node rect {
-      fill: rgba(21, 31, 48, 0.9);
-      stroke: rgba(184, 213, 255, 0.85);
-      stroke-width: 1.35;
-      rx: 14;
+      fill: var(--node);
+      stroke: var(--purple);
+      stroke-width: 1.5;
+      rx: 12;
     }
     .node text {
-      fill: #eaf2ff;
-      font-size: 13px;
+      fill: #f0f3ff;
+      font-size: 12.8px;
       font-weight: 600;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
       text-anchor: middle;
       dominant-baseline: middle;
     }
-    .edge {
+    .edge-always {
       fill: none;
-      stroke: rgba(218, 235, 255, 0.85);
-      stroke-width: 1.6;
-      marker-end: url(#arrow);
+      stroke: var(--green);
+      stroke-width: 1.8;
+      marker-end: url(#arrow-green);
     }
-    .edge.label-free { stroke-dasharray: 4 4; }
+    .edge-branch {
+      fill: none;
+      stroke: var(--amber);
+      stroke-width: 1.8;
+      stroke-dasharray: 4 4;
+      marker-end: url(#arrow-amber);
+    }
     .edge-label {
-      font-size: 11.5px;
-      fill: #b6c5e0;
+      font-size: 11.3px;
+      fill: #d9e1ff;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
     }
-    .dim { opacity: 0.2; transition: opacity 180ms ease; }
-    .highlight rect { fill: rgba(31, 46, 70, 0.95); }
-    .path-highlight { stroke-width: 2.7; stroke: #76e6ff; }
+    .dim { opacity: 0.2; transition: opacity 160ms ease; }
+    .highlight rect { fill: #162141; }
+    .path-highlight { stroke-width: 2.9; stroke: #dce5ff !important; }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.93rem;
+      font-size: 0.94rem;
     }
     th, td {
       text-align: left;
-      padding: 9px 8px;
-      border-bottom: 1px solid rgba(129, 157, 205, 0.28);
+      border-bottom: 1px solid #1d2743;
+      padding: 10px 8px;
       vertical-align: top;
-      color: #ccdaf2;
+      color: #c5cee9;
     }
     th {
-      color: #eef5ff;
+      color: #edf2ff;
       font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
 
-    .lane-gtm {
-      background: linear-gradient(145deg, rgba(12, 24, 35, 0.94), rgba(15, 30, 45, 0.9));
-      border-color: rgba(102, 226, 255, 0.35);
-    }
-    .lane-out {
-      background: linear-gradient(145deg, rgba(28, 16, 39, 0.92), rgba(33, 20, 50, 0.9));
-      border-color: rgba(228, 111, 255, 0.35);
-    }
-
     .footer {
-      margin-top: 14px;
-      color: #9fb1cf;
-      font-size: 0.9rem;
+      margin-top: 22px;
       text-align: center;
+      color: #95a2c7;
+      font-size: 0.9rem;
     }
-    a { color: #cce5ff; }
-    .tiny { font-size: 0.84rem; color: #94a7ca; }
+    .tiny { font-size: 0.84rem; color: #95a2c7; text-align: center; margin-top: 12px; }
+    a { color: #a7bdfd; }
   </style>
 </head>
 <body>
-  <div class="noise" aria-hidden="true"></div>
-  <main class="wrap">
+  <main class="container">
     <section class="hero">
+      <div class="eyebrow">Technical Walkthrough</div>
       <h1>Galileo Marketing Assistant</h1>
-      <p class="hero-sub">A visual walkthrough of your real multi-agent codebase: router, nodes, graph routes, tools, evals, and how everything connects from one user message to final output.</p>
-      <div class="tag-row">
-        <span class="tag">LangGraph</span>
-        <span class="tag">Router + GTM + Outreach</span>
-        <span class="tag">Qdrant + Gemini Embeddings</span>
-        <span class="tag">Anthropic LLM</span>
-        <span class="tag">Galileo Tracing + Evals</span>
+      <p class="lead">A step-by-step guide to your real multi-agent architecture: router, GTM and outreach routes, tool usage, evaluation flow, and how one user prompt moves through the graph.</p>
+      <div class="chip-row">
+        <span class="chip">LangGraph</span>
+        <span class="chip">Router + GTM + Outreach</span>
+        <span class="chip">Qdrant + Gemini Embeddings</span>
+        <span class="chip">Anthropic LLM</span>
+        <span class="chip">Galileo Tracing + Evals</span>
       </div>
-      <a class="tiny-note" href="https://ritvik777.github.io/Introduction-to-RAG/" target="_blank" rel="noreferrer">Design inspiration: Introduction to RAG</a>
+      <a class="source-link" href="https://ritvik777.github.io/Introduction-to-RAG/" target="_blank" rel="noreferrer">Reference inspiration: Introduction to RAG</a>
     </section>
 
-    <section class="grid" aria-label="stats">
-      <article class="card kpi"><strong>3</strong><span>Agent roles</span></article>
-      <article class="card kpi"><strong>9</strong><span>LangGraph nodes</span></article>
-      <article class="card kpi"><strong>4</strong><span>Runtime tools</span></article>
-      <article class="card kpi"><strong>17</strong><span>Eval prompts</span></article>
+    <section class="kpi-grid" aria-label="stats">
+      <article class="kpi"><strong>3</strong><span>Agent roles</span></article>
+      <article class="kpi"><strong>9</strong><span>LangGraph nodes</span></article>
+      <article class="kpi"><strong>4</strong><span>Core tools</span></article>
+      <article class="kpi"><strong>17</strong><span>Eval prompts</span></article>
     </section>
 
-    <section class="card full">
+    <section class="section spaced">
       <h2>Explain it like I am 10</h2>
-      <div class="story">
-        <p>Think of this app like a smart office. The <strong>Router Agent</strong> is the front desk. It listens to your question and sends you to the right room.</p>
-        <ul>
-          <li><strong>GTM Room:</strong> answers product questions and pricing.</li>
-          <li><strong>Outreach Room:</strong> writes content, finds leads, and can send emails if you clearly ask.</li>
-        </ul>
-      </div>
-      <p>All rooms share one backpack called <span class="mono">AgentState</span> with <span class="mono">question</span>, <span class="mono">context</span>, <span class="mono">answer</span>, and step logs in <span class="mono">steps</span>.</p>
+      <p>Think of this app like a smart office:</p>
+      <ul>
+        <li><strong>Router Agent</strong> is the front desk deciding where your question should go.</li>
+        <li><strong>GTM Agent</strong> handles product and pricing questions.</li>
+        <li><strong>Outreach Agent</strong> writes marketing content and can send emails when intent is explicit.</li>
+      </ul>
+      <p>Each step uses the same shared state backpack: <span class="mono">AgentState</span> with <span class="mono">question</span>, <span class="mono">context</span>, <span class="mono">answer</span>, and trace <span class="mono">steps</span>.</p>
     </section>
 
-    <section class="card full">
-      <h2>Live graph from your current code</h2>
+    <section class="section">
+      <h2>Live graph from current code</h2>
       <div class="legend">
-        <span><span class="dot" style="background:#e9f4ff;"></span>normal edge</span>
-        <span><span class="dot" style="background:#93aacb;"></span>dashed = conditional route</span>
+        <span><span class="dot" style="background:var(--purple);"></span>Node (function)</span>
+        <span><span class="dot" style="background:var(--green);"></span>Edge (always)</span>
+        <span><span class="dot" style="background:var(--amber);"></span>Branch (conditional)</span>
       </div>
       <div class="controls">
         <button data-mode="all">Show full flow</button>
@@ -316,10 +363,13 @@
         <button data-mode="outreach">Highlight Outreach path</button>
       </div>
       <div class="graph-wrap">
-        <svg viewBox="0 0 1200 490" role="img" aria-label="LangGraph routing diagram">
+        <svg viewBox="0 0 1200 500" role="img" aria-label="LangGraph routing diagram">
           <defs>
-            <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L10,4 L0,8 z" fill="#bcd9ff"></path>
+            <marker id="arrow-green" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L10,4 L0,8 z" fill="#6af39a"></path>
+            </marker>
+            <marker id="arrow-amber" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L10,4 L0,8 z" fill="#ffbe58"></path>
             </marker>
           </defs>
 
@@ -335,20 +385,20 @@
           <g id="n-send" class="node"><rect x="995" y="322" width="140" height="56"></rect><text x="1065" y="350">outreach_send</text></g>
           <g id="n-end" class="node"><rect x="1128" y="200" width="70" height="56"></rect><text x="1163" y="228">END</text></g>
 
-          <path id="e-start-classify" class="edge" d="M134 228 L174 228"></path>
-          <path id="e-classify-gtm" class="edge label-free edge-gtm" d="M314 210 C336 180, 335 130, 360 113"></path>
-          <path id="e-classify-out" class="edge label-free edge-outreach" d="M314 246 C337 285, 336 338, 360 350"></path>
-          <path id="e-gtm-retrieve-pricing" class="edge edge-gtm" d="M530 113 L570 113"></path>
-          <path id="e-pricing-gtm-gen" class="edge label-free edge-gtm" d="M720 98 C790 52, 890 58, 942 98"></path>
-          <path id="e-pricing-email" class="edge label-free edge-gtm" d="M720 113 L760 113"></path>
-          <path id="e-email-gtm-gen" class="edge label-free edge-gtm" d="M905 113 L942 113"></path>
-          <path id="e-gtm-end" class="edge edge-gtm" d="M1087 113 C1130 113, 1140 170, 1142 200"></path>
-          <path id="e-email-end" class="edge label-free edge-gtm" d="M833 141 C833 185, 1070 215, 1128 228"></path>
-          <path id="e-out-research-gen" class="edge edge-outreach" d="M550 350 L590 350"></path>
-          <path id="e-out-gen-sendgate" class="edge edge-outreach" d="M780 350 L820 350"></path>
-          <path id="e-sendgate-send" class="edge label-free edge-outreach" d="M960 350 L995 350"></path>
-          <path id="e-sendgate-end" class="edge label-free edge-outreach" d="M890 322 C900 255, 1088 232, 1128 228"></path>
-          <path id="e-send-end" class="edge edge-outreach" d="M1135 350 C1160 350, 1160 265, 1160 256"></path>
+          <path id="e-start-classify" class="edge-always" d="M134 228 L174 228"></path>
+          <path id="e-classify-gtm" class="edge-branch edge-gtm" d="M314 210 C336 180, 335 130, 360 113"></path>
+          <path id="e-classify-out" class="edge-branch edge-outreach" d="M314 246 C337 285, 336 338, 360 350"></path>
+          <path id="e-gtm-retrieve-pricing" class="edge-always edge-gtm" d="M530 113 L570 113"></path>
+          <path id="e-pricing-gtm-gen" class="edge-branch edge-gtm" d="M720 98 C790 52, 890 58, 942 98"></path>
+          <path id="e-pricing-email" class="edge-branch edge-gtm" d="M720 113 L760 113"></path>
+          <path id="e-email-gtm-gen" class="edge-branch edge-gtm" d="M905 113 L942 113"></path>
+          <path id="e-gtm-end" class="edge-always edge-gtm" d="M1087 113 C1130 113, 1140 170, 1142 200"></path>
+          <path id="e-email-end" class="edge-branch edge-gtm" d="M833 141 C833 185, 1070 215, 1128 228"></path>
+          <path id="e-out-research-gen" class="edge-always edge-outreach" d="M550 350 L590 350"></path>
+          <path id="e-out-gen-sendgate" class="edge-always edge-outreach" d="M780 350 L820 350"></path>
+          <path id="e-sendgate-send" class="edge-branch edge-outreach" d="M960 350 L995 350"></path>
+          <path id="e-sendgate-end" class="edge-branch edge-outreach" d="M890 322 C900 255, 1088 232, 1128 228"></path>
+          <path id="e-send-end" class="edge-always edge-outreach" d="M1135 350 C1160 350, 1160 265, 1160 256"></path>
 
           <text class="edge-label" x="332" y="184">gtm</text>
           <text class="edge-label" x="334" y="315">outreach</text>
@@ -360,49 +410,49 @@
           <text class="edge-label" x="965" y="244">review</text>
         </svg>
       </div>
-      <p class="tiny">Simple version: Router picks GTM or Outreach, then each path has rule checks before END.</p>
+      <p class="tiny">Simple view: Router picks GTM or Outreach, then rule checks decide whether flow continues or ends.</p>
     </section>
 
-    <section class="grid">
-      <article class="card half lane-gtm">
+    <section class="two-col section">
+      <article class="panel panel-gtm">
         <h3>GTM path</h3>
         <ul>
-          <li><span class="mono">gtm_retrieve</span> pulls context from KB + web tools.</li>
-          <li><span class="mono">pricing_gate</span> detects pricing intent.</li>
-          <li>If pricing, <span class="mono">collect_email</span> enforces verified email.</li>
-          <li><span class="mono">gtm_generate</span> writes final answer from context.</li>
+          <li><span class="mono">gtm_retrieve</span> gathers context from knowledge base + web.</li>
+          <li><span class="mono">pricing_gate</span> checks if pricing was requested.</li>
+          <li><span class="mono">collect_email</span> requires verified email for pricing details.</li>
+          <li><span class="mono">gtm_generate</span> returns final product answer.</li>
         </ul>
       </article>
-      <article class="card half lane-out">
+      <article class="panel panel-outreach">
         <h3>Outreach path</h3>
         <ul>
-          <li><span class="mono">outreach_research</span> uses Apollo for lead tasks, else KB + web.</li>
-          <li><span class="mono">outreach_generate</span> drafts post/email content.</li>
+          <li><span class="mono">outreach_research</span> uses Apollo for lead requests, else KB + web.</li>
+          <li><span class="mono">outreach_generate</span> drafts content.</li>
           <li><span class="mono">send_gate</span> decides send vs review.</li>
-          <li><span class="mono">outreach_send</span> sends via SendGrid when explicitly requested.</li>
+          <li><span class="mono">outreach_send</span> sends via SendGrid when requested.</li>
         </ul>
       </article>
     </section>
 
-    <section class="card full">
+    <section class="section">
       <h2>Project map</h2>
       <table>
         <thead><tr><th>Area</th><th>Main files</th><th>Responsibility</th></tr></thead>
         <tbody>
-          <tr><td>App UI</td><td><span class="mono">app.py</span>, <span class="mono">ui/ui.py</span></td><td>Streamlit chat UI, sidebar, upload docs, render trace.</td></tr>
-          <tr><td>Graph + state</td><td><span class="mono">agents/graph.py</span>, <span class="mono">agents/state.py</span></td><td>Node topology and shared state fields.</td></tr>
+          <tr><td>App UI</td><td><span class="mono">app.py</span>, <span class="mono">ui/ui.py</span></td><td>Chat interface, sidebar tools, pipeline trace rendering.</td></tr>
+          <tr><td>Graph + state</td><td><span class="mono">agents/graph.py</span>, <span class="mono">agents/state.py</span></td><td>Node wiring and shared state contract.</td></tr>
           <tr><td>Router</td><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Rule hints + LLM fallback classification.</td></tr>
-          <tr><td>GTM</td><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>Retrieve, pricing gate, email gate, generate answer.</td></tr>
-          <tr><td>Outreach</td><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Research, content generation, send gate, email send.</td></tr>
-          <tr><td>Tools</td><td><span class="mono">agents/tools.py</span></td><td>KB search, web search, Apollo lead search, SendGrid send.</td></tr>
-          <tr><td>Vector DB</td><td><span class="mono">vector_db/*</span></td><td>Chunk, embed, store/search in Qdrant.</td></tr>
-          <tr><td>Evals</td><td><span class="mono">evals/run_galileo_evals.py</span></td><td>17-case suite in sessions or experiment mode.</td></tr>
+          <tr><td>GTM</td><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>Retrieve, gate pricing/email, and generate answers.</td></tr>
+          <tr><td>Outreach</td><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Research, generate content, send intent, and delivery.</td></tr>
+          <tr><td>Tools</td><td><span class="mono">agents/tools.py</span></td><td>KB search, web search, Apollo lookup, SendGrid email.</td></tr>
+          <tr><td>Vector DB</td><td><span class="mono">vector_db/*</span></td><td>Chunking, embeddings, and Qdrant store/search.</td></tr>
+          <tr><td>Evals</td><td><span class="mono">evals/run_galileo_evals.py</span></td><td>17-case eval suite in sessions or experiment mode.</td></tr>
         </tbody>
       </table>
     </section>
 
-    <section class="grid">
-      <article class="card third">
+    <section class="three-col section">
+      <article class="panel">
         <h3>Core tools</h3>
         <ul>
           <li><span class="mono">search_knowledge_base(query)</span></li>
@@ -411,28 +461,26 @@
           <li><span class="mono">send_email(to, subject, html)</span></li>
         </ul>
       </article>
-      <article class="card third">
+      <article class="panel">
         <h3>State fields</h3>
         <ul>
-          <li><span class="mono">question</span></li>
-          <li><span class="mono">agent_type</span></li>
-          <li><span class="mono">context</span></li>
-          <li><span class="mono">answer</span></li>
-          <li><span class="mono">is_pricing</span>, <span class="mono">user_email</span>, <span class="mono">send_requested</span></li>
-          <li><span class="mono">steps</span> (merged trace)</li>
+          <li><span class="mono">question</span>, <span class="mono">agent_type</span>, <span class="mono">context</span></li>
+          <li><span class="mono">answer</span>, <span class="mono">is_pricing</span>, <span class="mono">user_email</span></li>
+          <li><span class="mono">send_requested</span>, <span class="mono">steps</span></li>
         </ul>
       </article>
-      <article class="card third">
-        <h3>How to deploy this page</h3>
+      <article class="panel">
+        <h3>Deploy this page</h3>
         <ul>
-          <li>Use GitHub Pages: <span class="mono">Deploy from a branch</span></li>
-          <li>Branch: <span class="mono">main</span>, folder: <span class="mono">/(root)</span></li>
-          <li>Keep this file at <span class="mono">index.html</span> in repo root</li>
+          <li>GitHub Pages -> Deploy from a branch</li>
+          <li>Branch: <span class="mono">main</span></li>
+          <li>Folder: <span class="mono">/(root)</span></li>
+          <li>Keep file as <span class="mono">index.html</span> in root</li>
         </ul>
       </article>
     </section>
 
-    <p class="footer">Built directly from the current multi-agent code, not old architecture docs.</p>
+    <p class="footer">Built from your current multi-agent code path. Updated with cleaner spacing and reference-inspired readability.</p>
   </main>
 
   <script>
