@@ -2,7 +2,7 @@ from agents import ask, get_graph_image
 
 
 def ask_agent(question: str) -> dict:
-    return ask(question, source="ui_interface")
+    return ask(question)
 
 
 def load_graph_image() -> bytes:

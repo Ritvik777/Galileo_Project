@@ -37,12 +37,12 @@ DATASET = [
 def run_agent(question: Any) -> str:
     if isinstance(question, dict):
         question = question.get("input", "")
-    result = ask(str(question), source="automated_evals")
+    result = ask(str(question))
     return result.get("answer", "")
 
 
 def main() -> None:
-    experiment_name = os.getenv("GALILEO_EXPERIMENT_NAME", "marketing-agent-baseline")
+    experiment_name = os.getenv("GALILEO_EXPERIMENT_NAME", "Automated Evals")
     project_name = get_eval_project()
 
     print("Good criteria:")

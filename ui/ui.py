@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, UTC
 import os
+from uuid import uuid4
 from services.vector_db_service import add_text_documents, add_pdf_document
 from services.agent_service import ask_agent, load_graph_image
 from observability import start_chat_session, get_console_links
@@ -130,6 +131,7 @@ def initialize_session_state() -> None:
     st.session_state.setdefault("pending_drafts", "")
     st.session_state.setdefault("galileo_session_started", False)
     st.session_state.setdefault("galileo_debug_links_shown", False)
+    st.session_state.setdefault("ui_streamlit_session_id", uuid4().hex[:8])
     if not st.session_state.messages:
         st.session_state.galileo_session_started = False
         st.session_state.galileo_debug_links_shown = False
@@ -142,6 +144,7 @@ def _reset_chat_state() -> None:
     st.session_state.pending_drafts = ""
     st.session_state.galileo_session_started = False
     st.session_state.galileo_debug_links_shown = False
+    st.session_state.ui_streamlit_session_id = uuid4().hex[:8]
 
 
 def _show_galileo_debug_links_once() -> None:
@@ -320,7 +323,7 @@ def _push_assistant_message(result: dict) -> None:
 
 def handle_new_prompt(prompt: str) -> None:
     if not st.session_state.messages and not st.session_state.galileo_session_started:
-        session_name = f"streamlit-chat-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}"
+        session_name = f"UI Streamlit {st.session_state.ui_streamlit_session_id}"
         st.session_state.galileo_session_started = start_chat_session(session_name)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
