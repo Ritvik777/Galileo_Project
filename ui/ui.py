@@ -3,7 +3,7 @@ from datetime import datetime, UTC
 import os
 from uuid import uuid4
 from services.vector_db_service import add_text_documents, add_pdf_document
-from services.agent_service import ask_agent, load_graph_image
+from services.agent_service import ask_agent, load_graph_image, load_graph_ascii
 from observability import start_chat_session, get_console_links
 
 
@@ -229,13 +229,22 @@ def _render_doc_upload() -> None:
 
 def _render_graph() -> None:
     with st.expander("🗺️ Agent Graph", expanded=False):
-        try:
-            st.image(load_graph_image())
-        except Exception:
-            st.code(
-                "classify ─┬─ gtm_retrieve → pricing_gate → gtm_generate\n"
-                "          └─ outreach_research → outreach_generate"
-            )
+        img_bytes = load_graph_image()
+        if img_bytes:
+            st.image(img_bytes)
+        else:
+            try:
+                st.caption("PNG unavailable, showing graph structure:")
+                st.code(load_graph_ascii(), language="text")
+            except Exception:
+                st.caption("Graph structure:")
+                st.code(
+                    "classify ─┬─ gtm_retrieve → pricing_gate ─┬─ gtm_generate → END\n"
+                    "          │                              └─ collect_email → gtm_generate / END\n"
+                    "          └─ outreach_research → outreach_generate → send_gate ─┬─ END (review)\n"
+                    "                                                                 └─ outreach_send → END",
+                    language="text",
+                )
 
 
 def _render_how_it_works() -> None:
@@ -243,17 +252,25 @@ def _render_how_it_works() -> None:
         st.markdown("""
 **Supervisor Routing Agent** classifies your message:
 - Product / pricing question → **GTM Agent**
-- Content creation request → **Outreach Agent**
+- Content creation / lead research request → **Outreach Agent**
 
 **GTM Agent** 🎯
-- Searches Galileo docs + live web
-- Gates pricing behind email verification
+- Searches product docs + live web for answers
+- Gates pricing details behind email verification
+- Uses: `search_knowledge_base`, `web_search`
 
 **Outreach Agent** 📝
-- Researches product context + audience
+- Researches product context and audience
+- Finds leads via Apollo (job title, industry)
 - Creates LinkedIn posts, emails, marketing copy
+- Can send emails via SendGrid when you ask to send
+- Uses: `search_knowledge_base`, `web_search`, `apollo_search`, `send_email`
 
-**Tools:** `search_knowledge_base` (Qdrant) · `web_search` (DuckDuckGo)
+**All 4 tools:**
+- `search_knowledge_base` (Qdrant) — product docs from your knowledge base
+- `web_search` (DuckDuckGo) — live web for market/competitor info
+- `apollo_search` (Apollo.io) — find leads by job title, location, industry
+- `send_email` (SendGrid) — deliver personalized emails
 """)
 
 

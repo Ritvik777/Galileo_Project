@@ -36,7 +36,7 @@ def build_graph():
     })
     g.add_edge("gtm_generate", END)
 
-    # Outreach pipeline (send only when user says "send")
+    # Outreach pipeline
     g.add_edge("outreach_research", "outreach_generate")
     g.add_edge("outreach_generate", "send_gate")
     g.add_conditional_edges("send_gate", route_send, {

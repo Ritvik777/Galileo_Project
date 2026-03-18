@@ -56,5 +56,17 @@ def ask(question: str) -> dict:
         raise
 
 
-def get_graph_image() -> bytes:
-    return graph.get_graph().draw_mermaid_png()
+def get_graph_image() -> bytes | None:
+    """Return PNG bytes, or None if rendering fails (e.g. Mermaid.INK API unreachable)."""
+    try:
+        return graph.get_graph().draw_mermaid_png()
+    except Exception:
+        return None
+
+
+def get_graph_ascii() -> str:
+    """Return ASCII or Mermaid representation of the graph. Prefers ASCII when grandalf is installed."""
+    try:
+        return graph.get_graph().draw_ascii()
+    except ImportError:
+        return graph.get_graph().draw_mermaid()

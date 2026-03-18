@@ -82,9 +82,9 @@ evals/run_galileo_evals.py      # baseline evaluation suite
 |---|---|
 | `app.py` | Main Streamlit entrypoint that initializes app shell and chat loop. |
 | `ui/ui.py` | UI logic: styling, sidebar blocks, upload handlers, chat rendering, and trace display. |
-| `services/agent_service.py` | Service adapter for agent runtime calls and graph image loading. |
+| `services/agent_service.py` | Service adapter for `ask()`, `load_graph_image()` (PNG), and `load_graph_ascii()` (fallback when PNG fails). |
 | `services/vector_db_service.py` | Service adapter for adding docs/PDFs and reading DB counts. |
-| `agents/__init__.py` | Runtime `ask()` entrypoint with top-level graph invocation and trace lifecycle. |
+| `agents/__init__.py` | Runtime `ask()` entrypoint, `get_graph_image()` (PNG), `get_graph_ascii()` (fallback for UI graph). |
 | `agents/graph.py` | LangGraph wiring for nodes and conditional routing. |
 | `agents/state.py` | Shared `AgentState` schema and merged `steps` reducer behavior. |
 | `agents/router_agent/nodes.py` | Supervisor Routing Agent classification logic (`gtm` vs `outreach`) using LLM. |
@@ -173,6 +173,8 @@ Required Galileo env vars are in `.env.example`:
 ```bash
 pip install -r requirements.txt
 ```
+
+> **Note:** `grandalf` (in requirements) enables ASCII graph fallback in the Streamlit sidebar when PNG rendering (Mermaid.INK API) is unavailable.
 
 ### 2) Configure environment
 

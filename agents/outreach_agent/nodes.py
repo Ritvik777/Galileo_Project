@@ -11,7 +11,6 @@ from observability import merge_node_config
 
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
-
 def _llm_leads_decision(question: str, config: RunnableConfig | None = None) -> str | None:
     """LLM decides if user wants to find leads/prospects. Returns 'leads' or 'content', or None on failure."""
     try:
@@ -49,7 +48,7 @@ def _extract_emails(text: str) -> list[str]:
 
 def _llm_send_decision(question: str, draft: str, config: RunnableConfig | None = None) -> str | None:
     try:
-        llm = get_llm(temperature=0)
+        llm = get_llm(temperature=0.7)
         resp = llm.invoke(
             "Decide whether the user is explicitly asking to SEND an email now.\n"
             "Return exactly one word: send or review.\n\n"
@@ -247,3 +246,31 @@ def outreach_send(state: AgentState, config: RunnableConfig | None = None) -> di
         "answer": f"{summary}---\n\n{state['answer']}",
         "steps": [f"Outreach Send → ✅ {len(sent)} sent, ❌ {len(failed)} failed"],
     }
+
+
+
+# User question
+#      ↓
+# [outreach_research]
+#   - leads vs content gate (LLM)
+#   - Leads → Apollo + KB
+#   - Content → KB + web search
+#      ↓
+# [outreach_generate]
+#   - Leads → one personalized email per lead
+#   - Content → single email or LinkedIn post
+#      ↓
+# [send_gate]
+#   - send vs review gate (LLM)
+#      ↓
+# route_send
+#   - "review" → END (review only)
+#   - "send" → outreach_send
+#      ↓
+# [outreach_send]
+#   - Extract emails from draft/question
+#   - Parse subject and body
+#   - Send each via send_email (SendGrid)
+#   - Append summary to answer
+#      ↓
+# END

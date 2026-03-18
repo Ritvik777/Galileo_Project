@@ -434,15 +434,15 @@
         <tbody>
           <tr><td><span class="mono">app.py</span></td><td>Main Streamlit entrypoint that boots the UI and wires sidebar + chat loop.</td></tr>
           <tr><td><span class="mono">ui/ui.py</span></td><td>UI behavior: styles, upload widgets, chat history rendering, prompt handling, and trace display.</td></tr>
-          <tr><td><span class="mono">services/agent_service.py</span></td><td>Thin service wrapper that calls the runtime graph entrypoint.</td></tr>
+          <tr><td><span class="mono">services/agent_service.py</span></td><td>Service adapter for `ask()`, `load_graph_image()` (PNG), and `load_graph_ascii()` (fallback).</td></tr>
           <tr><td><span class="mono">services/vector_db_service.py</span></td><td>Thin service wrapper for adding docs/PDFs and checking vector DB counts.</td></tr>
-          <tr><td><span class="mono">agents/__init__.py</span></td><td>Main runtime API (`ask`) that initializes tracing and invokes compiled graph.</td></tr>
+          <tr><td><span class="mono">agents/__init__.py</span></td><td>Main runtime API (`ask`), `get_graph_image()` (PNG), `get_graph_ascii()` (fallback when PNG fails).</td></tr>
           <tr><td><span class="mono">agents/graph.py</span></td><td>Defines LangGraph nodes and all edges/conditional routes.</td></tr>
           <tr><td><span class="mono">agents/state.py</span></td><td>Shared `AgentState` schema and `steps` merge behavior across nodes.</td></tr>
           <tr><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Intent classification (`gtm` vs `outreach`) using LLM.</td></tr>
           <tr><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>GTM branch: retrieve context, pricing gate, email gate, final GTM generation.</td></tr>
           <tr><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Outreach branch: research, draft generation, send gate, optional SendGrid send.</td></tr>
-          <tr><td><span class="mono">agents/tools.py</span></td><td>Shared tools (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`) and tool-calling loop.</td></tr>
+          <tr><td><span class="mono">agents/tools.py</span></td><td>All 4 tools: <span class="mono">search_knowledge_base</span> (Qdrant), <span class="mono">web_search</span> (DuckDuckGo), <span class="mono">apollo_search</span> (Apollo), <span class="mono">send_email</span> (SendGrid) + tool-calling loop.</td></tr>
           <tr><td><span class="mono">vector_db/database.py</span></td><td>Qdrant client setup, collection validation, add/search/count methods.</td></tr>
           <tr><td><span class="mono">vector_db/chunker.py</span></td><td>Text chunking and PDF extraction for indexing documents.</td></tr>
           <tr><td><span class="mono">vector_db/embeddings.py</span></td><td>Gemini embedding model factory used by vector store operations.</td></tr>
@@ -467,10 +467,10 @@
           <tr><td>Generation LLM</td><td><span class="mono">ChatAnthropic</span></td><td>Used in supervisor routing, gates, and generation nodes via <span class="mono">llm.py</span>.</td></tr>
           <tr><td>Embeddings</td><td><span class="mono">Google Gemini Embeddings</span></td><td>Converts knowledge docs into vectors for Qdrant retrieval.</td></tr>
           <tr><td>Vector Store</td><td><span class="mono">Qdrant Cloud</span></td><td>Stores chunks and returns similarity-scored context for tool calls.</td></tr>
-          <tr><td>Web Research</td><td><span class="mono">DuckDuckGo</span></td><td>Fallback/augmentation signal for external market context.</td></tr>
-          <tr><td>Lead + Email Ops</td><td><span class="mono">Apollo</span> + <span class="mono">SendGrid</span></td><td>Lead fetch and optional outbound send path in outreach branch.</td></tr>
+          <tr><td>Web Research</td><td><span class="mono">DuckDuckGo</span></td><td><code>web_search</code> — live web for market/competitor context.</td></tr>
+          <tr><td>Leads + Email</td><td><span class="mono">Apollo</span> + <span class="mono">SendGrid</span></td><td><code>apollo_search</code> (leads by job/industry), <code>send_email</code> (outreach send path).</td></tr>
           <tr><td>Observability</td><td><span class="mono">Galileo</span></td><td>Spans, traces, sessions, and experiment logging.</td></tr>
-          <tr><td>UI</td><td><span class="mono">Streamlit</span></td><td>Chat UX, graph preview, upload flow, and step trace display.</td></tr>
+          <tr><td>UI</td><td><span class="mono">Streamlit</span></td><td>Chat UX, graph preview (PNG with ASCII/Mermaid fallback), upload flow, and step trace display.</td></tr>
         </tbody>
       </table>
     </section>
@@ -535,7 +535,7 @@
           <text class="edge-label" x="965" y="244">review</text>
         </svg>
       </div>
-      <p class="tiny">The graph is tree-shaped from a single classifier root, with conditional branch points for pricing and send intent.</p>
+      <p class="tiny">The graph is tree-shaped from a single classifier root, with conditional branch points for pricing and send intent. The Streamlit UI shows PNG when available; falls back to ASCII or Mermaid if Mermaid.INK is unreachable.</p>
     </section>
 
     <section class="section anchor-target" id="state">
@@ -579,6 +579,19 @@
           </ol>
         </article>
       </div>
+    </section>
+
+    <section class="section">
+      <h2>Step 6b: All 4 Tools</h2>
+      <table>
+        <thead><tr><th>Tool</th><th>Backend</th><th>Used by</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">search_knowledge_base</span></td><td>Qdrant</td><td>GTM, Outreach</td><td>Product docs from your indexed knowledge base</td></tr>
+          <tr><td><span class="mono">web_search</span></td><td>DuckDuckGo</td><td>GTM, Outreach</td><td>Live web for market/competitor/industry info</td></tr>
+          <tr><td><span class="mono">apollo_search</span></td><td>Apollo.io</td><td>Outreach</td><td>Find leads by job title, location, industry</td></tr>
+          <tr><td><span class="mono">send_email</span></td><td>SendGrid</td><td>Outreach</td><td>Deliver personalized emails when user asks to send</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section class="section">

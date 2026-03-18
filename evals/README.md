@@ -102,12 +102,12 @@ Declared quality goals:
 
 In default `sessions` mode, each case logs pipeline steps and the script parses observed tools from `steps`.
 
-Expected tool coverage:
+Expected tool coverage (all 4 tools):
 
-- `search_knowledge_base`
-- `web_search`
-- `apollo_search`
-- `send_email`
+- `search_knowledge_base` (Qdrant)
+- `web_search` (DuckDuckGo)
+- `apollo_search` (Apollo.io)
+- `send_email` (SendGrid)
 
 At the end, it prints PASS/fail coverage summary.
 
