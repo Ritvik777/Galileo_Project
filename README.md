@@ -1,6 +1,6 @@
-# Galileo Marketing Assistant (Multi-Agent LangGraph)
+# Galileo: AI Marketing Agent with Observations & Evals
 
-This repository is a **multi-agent marketing assistant** built with LangGraph.
+This repository is a **Galileo: AI Marketing Agent with Observations & Evals** built with LangGraph.
 
 - Router decides between **GTM** and **Outreach** behavior
 - GTM branch answers product and pricing questions

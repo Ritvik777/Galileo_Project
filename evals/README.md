@@ -2,6 +2,8 @@
 
 This folder contains the evaluation harness for the current **multi-agent Galileo Marketing Assistant**.
 
+**Click here for Technical Understanding Blog:** [https://ritvik777.github.io/Galileo_Project/](https://ritvik777.github.io/Galileo_Project/)
+
 The app has:
 
 - A **Router agent** (`gtm` vs `outreach`)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Galileo Marketing Assistant - Technical Walkthrough</title>
+  <title>Galileo: AI Marketing Agent with Observations & Evals</title>
   <meta name="description" content="A beginner-friendly explanation of the Galileo multi-agent architecture, graph routing, tools, and evaluations.">
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
@@ -112,22 +112,13 @@
       color: #d5ddfa;
     }
 
-    .source-link {
-      display: inline-block;
-      margin-top: 12px;
-      font-size: 0.88rem;
-      color: #9db6ff;
-      text-decoration: none;
-      border-bottom: 1px dashed rgba(157, 182, 255, 0.6);
-    }
-
     .section {
       background: linear-gradient(180deg, var(--surface), var(--surface-2));
       border: 1px solid var(--line);
       border-radius: 22px;
       padding: clamp(26px, 4vw, 36px);
       box-shadow: var(--shadow);
-      margin-top: 18px;
+      margin-top: 24px;
     }
 
     .spaced { margin-top: 30px; }
@@ -159,13 +150,13 @@
     .two-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 16px;
     }
 
     .three-col {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 16px;
     }
 
     @media (max-width: 960px) {
@@ -178,6 +169,28 @@
       border-radius: 16px;
       background: rgba(15, 20, 38, 0.9);
       padding: 18px;
+    }
+    .step-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    .step-list li {
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid #213157;
+      border-radius: 10px;
+      background: #0f1730;
+      color: #d4ddff;
+    }
+    .example-block {
+      border: 1px solid #223562;
+      background: #0d152b;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
     }
 
     .panel-gtm {
@@ -320,7 +333,7 @@
   <main class="container">
     <section class="hero">
       <div class="eyebrow">Technical Walkthrough</div>
-      <h1>Galileo Marketing Assistant</h1>
+      <h1>Galileo: AI Marketing Agent with Observations & Evals</h1>
       <p class="lead">A step-by-step guide to your real multi-agent architecture: router, GTM and outreach routes, tool usage, evaluation flow, and how one user prompt moves through the graph.</p>
       <div class="chip-row">
         <span class="chip">LangGraph</span>
@@ -329,7 +342,6 @@
         <span class="chip">Anthropic LLM</span>
         <span class="chip">Galileo Tracing + Evals</span>
       </div>
-      <a class="source-link" href="https://ritvik777.github.io/Introduction-to-RAG/" target="_blank" rel="noreferrer">Reference inspiration: Introduction to RAG</a>
     </section>
 
     <section class="kpi-grid" aria-label="stats">
@@ -348,6 +360,42 @@
         <li><strong>Outreach Agent</strong> writes marketing content and can send emails when intent is explicit.</li>
       </ul>
       <p>Each step uses the same shared state backpack: <span class="mono">AgentState</span> with <span class="mono">question</span>, <span class="mono">context</span>, <span class="mono">answer</span>, and trace <span class="mono">steps</span>.</p>
+    </section>
+
+    <section class="section">
+      <h2>Technical Framework (Line by Line)</h2>
+      <div class="two-col">
+        <article class="panel">
+          <h3>Request processing sequence</h3>
+          <ol class="step-list">
+            <li><span class="mono">ask(question)</span> builds base <span class="mono">AgentState</span> and calls graph.</li>
+            <li><span class="mono">classify</span> sets <span class="mono">agent_type</span> to <span class="mono">gtm</span> or <span class="mono">outreach</span>.</li>
+            <li>Selected branch collects <span class="mono">context</span> through tools.</li>
+            <li>Branch gates update policy fields (<span class="mono">is_pricing</span>, <span class="mono">user_email</span>, <span class="mono">send_requested</span>).</li>
+            <li>Generator node writes <span class="mono">answer</span>; all nodes append to <span class="mono">steps</span>.</li>
+            <li>Flow ends at <span class="mono">END</span> with final state returned to UI/evals.</li>
+          </ol>
+        </article>
+        <article class="panel">
+          <h3>Tree + routing logic</h3>
+          <ul>
+            <li>Root node: <span class="mono">classify</span></li>
+            <li>Child branch A: GTM subtree</li>
+            <li>Child branch B: Outreach subtree</li>
+            <li>GTM has conditional branch at <span class="mono">pricing_gate</span> and <span class="mono">collect_email</span></li>
+            <li>Outreach has conditional branch at <span class="mono">send_gate</span></li>
+            <li>This is a directed acyclic branch graph (no retry loop in current version)</li>
+          </ul>
+          <div class="example-block">
+            <strong>Node responsibilities:</strong>
+            <ul>
+              <li><span class="mono">router_agent</span> -> intent routing</li>
+              <li><span class="mono">gtm_agent</span> -> product/pricing answer path</li>
+              <li><span class="mono">outreach_agent</span> -> content + optional send path</li>
+            </ul>
+          </div>
+        </article>
+      </div>
     </section>
 
     <section class="section">
@@ -411,6 +459,28 @@
         </svg>
       </div>
       <p class="tiny">Simple view: Router picks GTM or Outreach, then rule checks decide whether flow continues or ends.</p>
+    </section>
+
+    <section class="section">
+      <h2>Examples (Easy + Technical)</h2>
+      <div class="two-col">
+        <article class="panel">
+          <h3>Example 1: Pricing question</h3>
+          <div class="example-block">
+            <p><strong>User:</strong> "What does Galileo cost?"</p>
+            <p><strong>Flow:</strong> <span class="mono">classify -> gtm_retrieve -> pricing_gate -> collect_email</span></p>
+            <p><strong>Result:</strong> asks for verified email before full pricing.</p>
+          </div>
+        </article>
+        <article class="panel">
+          <h3>Example 2: Outreach send request</h3>
+          <div class="example-block">
+            <p><strong>User:</strong> "Send this campaign email to ritvik@dauji.ai"</p>
+            <p><strong>Flow:</strong> <span class="mono">classify -> outreach_research -> outreach_generate -> send_gate -> outreach_send</span></p>
+            <p><strong>Result:</strong> sends via SendGrid and returns send summary.</p>
+          </div>
+        </article>
+      </div>
     </section>
 
     <section class="two-col section">
