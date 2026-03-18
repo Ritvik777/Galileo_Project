@@ -17,11 +17,45 @@ def _wants_leads(question: str) -> bool:
 
 def _should_send(question: str) -> bool:
     q = question.lower()
-    return any(kw in q for kw in SEND_KEYWORDS)
+    if any(kw in q for kw in SEND_KEYWORDS):
+        return True
+
+    # If user includes an address and asks to send, treat it as explicit send intent.
+    has_email = re.search(EMAIL_PATTERN, question) is not None
+    has_send_verb = bool(re.search(r"\bsend\b", q))
+    return has_email and has_send_verb
 
 
 def _extract_emails(text: str) -> list[str]:
     return re.findall(EMAIL_PATTERN, text)
+
+
+def _llm_send_decision(question: str, draft: str) -> str | None:
+    try:
+        llm = get_llm(temperature=0)
+        resp = llm.invoke(
+            "Decide whether the user is explicitly asking to SEND an email now.\n"
+            "Return exactly one word: send or review.\n\n"
+            "Rules:\n"
+            "- send: explicit execution intent (e.g. send it, send now, send to <email>, go ahead and send)\n"
+            "- review: drafting, editing, brainstorming, or unclear intent\n"
+            "- If uncertain, return review.\n\n"
+            f"User message: {question}\n"
+            f"Current draft preview: {draft[:400]}\n"
+            "Decision:",
+            config=get_langchain_config(
+                metadata={"node": "send_gate_decision", "agent_type": "outreach"},
+                tags=["agent:outreach", "gate:send"],
+            ) or None,
+        )
+        decision = str(resp.content).strip().lower()
+        if "send" in decision:
+            return "send"
+        if "review" in decision:
+            return "review"
+        return None
+    except Exception:
+        return None
 
 
 @log_span(span_type="workflow", name="outreach_research")
@@ -119,9 +153,15 @@ def outreach_generate(state: AgentState) -> dict:
 
 @log_span(span_type="workflow", name="send_gate")
 def send_gate(state: AgentState) -> dict:
-    should_send = _should_send(state["question"])
+    llm_decision = _llm_send_decision(state["question"], state.get("answer", ""))
+    if llm_decision is None:
+        should_send = _should_send(state["question"])
+        source = "rule-fallback"
+    else:
+        should_send = llm_decision == "send"
+        source = "llm"
     label = "📤 user wants to SEND" if should_send else "👀 review only (no send)"
-    return {"send_requested": should_send, "steps": [f"Send Gate → {label}"]}
+    return {"send_requested": should_send, "steps": [f"Send Gate({source}) → {label}"]}
 
 
 def route_send(state: AgentState) -> str:

@@ -100,3 +100,20 @@ def get_logger_instance():
         return galileo_context.get_logger_instance(project=GALILEO_PROJECT, log_stream=GALILEO_LOG_STREAM)
     except Exception:
         return None
+
+
+def get_console_links() -> dict[str, str]:
+    logger = get_logger_instance()
+    if logger is None:
+        return {}
+    try:
+        console_url = os.getenv("GALILEO_CONSOLE_URL", "https://app.galileo.ai").rstrip("/")
+        project_id = getattr(logger, "project_id", None)
+        log_stream_id = getattr(logger, "log_stream_id", None)
+        if not project_id or not log_stream_id:
+            return {}
+        project_url = f"{console_url}/project/{project_id}"
+        log_stream_url = f"{project_url}/log-streams/{log_stream_id}"
+        return {"project_url": project_url, "log_stream_url": log_stream_url}
+    except Exception:
+        return {}

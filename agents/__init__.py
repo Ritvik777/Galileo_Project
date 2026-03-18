@@ -14,7 +14,7 @@ from agents.graph import graph
 from observability import ensure_galileo_initialized, get_logger_instance, is_galileo_enabled
 
 
-def ask(question: str) -> dict:
+def ask(question: str, source: str = "ui_interface") -> dict:
     ensure_galileo_initialized()
     base_state = {
         "question": question, "agent_type": "", "context": "", "answer": "",
@@ -28,8 +28,9 @@ def ask(question: str) -> dict:
         return graph.invoke(base_state)
 
     in_existing_trace = logger.current_parent() is not None
+    trace_name = "Automated Evals" if source == "automated_evals" else "UI Interface"
     if not in_existing_trace:
-        logger.start_trace(input={"question": question}, name="ask_agent")
+        logger.start_trace(input={"question": question}, name=trace_name)
     try:
         result = graph.invoke(base_state)
         if not in_existing_trace:

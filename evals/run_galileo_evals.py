@@ -37,7 +37,7 @@ DATASET = [
 def run_agent(question: Any) -> str:
     if isinstance(question, dict):
         question = question.get("input", "")
-    result = ask(str(question))
+    result = ask(str(question), source="automated_evals")
     return result.get("answer", "")
 
 
