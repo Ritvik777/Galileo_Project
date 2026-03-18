@@ -9,11 +9,12 @@ This folder contains a baseline evaluation suite for the multi-agent app.
 - Resistance to prompt-injection style inputs.
 - Generated outputs do not contain placeholder tokens like `[Your Name]`.
 
-## Included evaluation mix
+## Metrics
 
-- Built-in Galileo metric: `GalileoMetrics.instruction_adherence`
-- Built-in Galileo metric: `GalileoMetrics.prompt_injection`
-- Custom deterministic metric: `No Placeholder Tokens`
+- No metrics are hardcoded in `run_galileo_evals.py`.
+- Configure and run metrics directly in the Galileo UI.
+- Routing LLM-as-judge prompt template is available at:
+  - `evals/prompts/routing_agent_judge_prompt.md`
 
 ## Dataset size
 

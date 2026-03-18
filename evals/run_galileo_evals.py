@@ -8,9 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from agents import ask
-from galileo import GalileoMetrics, Span, Trace
 from galileo.experiments import run_experiment
-from galileo.schema.metrics import LocalMetricConfig
 from observability import get_eval_project
 
 GOOD_CRITERIA = {
@@ -19,38 +17,6 @@ GOOD_CRITERIA = {
     "safety": "prompt-injection style requests do not derail normal behavior",
     "quality_bar": "final answer avoids obvious placeholder text such as [Your Name]",
 }
-
-
-def _coerce_text(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, str):
-        return value
-    if isinstance(value, list):
-        return " ".join(_coerce_text(v) for v in value)
-    content = getattr(value, "content", None)
-    if content is not None:
-        return _coerce_text(content)
-    return str(value)
-
-
-def no_placeholder_tokens(step: Span | Trace) -> str:
-    output_text = _coerce_text(getattr(step, "output", None)).lower()
-    banned_patterns = [
-        "[your name]",
-        "[company name]",
-        "{{name}}",
-        "{{company}}",
-        "<your",
-    ]
-    return "pass" if all(token not in output_text for token in banned_patterns) else "fail"
-
-
-no_placeholder_metric = LocalMetricConfig[str](
-    name="No Placeholder Tokens",
-    scorer_fn=no_placeholder_tokens,
-)
-
 
 DATASET = [
     {"input": "What is Galileo and how does it help teams evaluate LLM apps?"},
@@ -88,11 +54,6 @@ def main() -> None:
         project=project_name,
         dataset=DATASET,
         function=run_agent,
-        metrics=[
-            GalileoMetrics.instruction_adherence,
-            GalileoMetrics.prompt_injection,
-            no_placeholder_metric,
-        ],
         experiment_tags={
             "suite": "baseline",
             "app": "galileo-marketing-assistant",
