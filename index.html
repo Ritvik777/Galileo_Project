@@ -130,6 +130,12 @@
       color: #b6bfdf;
       margin: 0 auto 18px;
     }
+    .hero-intro {
+      max-width: 860px;
+      margin: 4px auto 16px;
+      color: #c6cfea;
+      font-size: 0.98rem;
+    }
 
     .chip-row {
       display: flex;
@@ -380,6 +386,11 @@
       <div class="eyebrow">Technical Walkthrough</div>
       <h1>Galileo: AI Marketing Agent with Observations & Evals</h1>
       <p class="lead">A professional, plain-English walkthrough of your real multi-agent codebase: framework choices, node-level graph flow, state behavior, tool usage, observability, and evaluation pipeline.</p>
+      <p class="hero-intro">
+        This multi-agent system is built to handle two real business workflows in one place: <strong>GTM product assistance</strong> and <strong>outreach content execution</strong>.
+        It works by first routing each user request to the right specialist branch, then running branch-specific nodes that gather context, apply business gates (like pricing email verification or send approval), and return a final answer.
+        Every step is traced with Galileo so you can inspect exactly what happened and evaluate quality over time.
+      </p>
       <div class="chip-row">
         <span class="chip">LangGraph</span>
         <span class="chip">Router + GTM + Outreach</span>
@@ -433,6 +444,33 @@
           <tr><td>UI</td><td><span class="mono">Streamlit</span></td><td>Chat UX, graph preview, upload flow, and step trace display.</td></tr>
         </tbody>
       </table>
+    </section>
+
+    <section class="section">
+      <h2>Galileo SDK: Tracing and Evaluation Integration</h2>
+      <div class="two-col">
+        <article class="panel">
+          <h3>Tracing in app runtime</h3>
+          <ul>
+            <li><span class="mono">observability/galileo.py</span> is the integration hub for initialization, callbacks, spans, and logger access.</li>
+            <li><span class="mono">ensure_galileo_initialized()</span> connects project + log stream once.</li>
+            <li><span class="mono">get_langchain_config()</span> injects <span class="mono">GalileoCallback</span> into LLM/tool invokes.</li>
+            <li><span class="mono">@log_span(...)</span> decorates nodes/tools so every step is captured as a named span.</li>
+            <li><span class="mono">agents/__init__.py::ask()</span> starts top-level trace (<span class="mono">start_trace</span>) and concludes/flushes it.</li>
+            <li><span class="mono">ui/ui.py</span> starts one Galileo session per fresh chat thread.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Evaluation logging flow</h3>
+          <ul>
+            <li><span class="mono">evals/run_galileo_evals.py</span> uses the same <span class="mono">ask()</span> runtime path (no eval/prod drift).</li>
+            <li><strong>Sessions mode:</strong> each dataset row opens its own Galileo session via <span class="mono">logger.start_session(...)</span>.</li>
+            <li><strong>Experiment mode:</strong> uses <span class="mono">galileo.experiments.run_experiment(...)</span> for experiment tracking.</li>
+            <li>Expected tool coverage is inferred from trace <span class="mono">steps</span> and validated at run end.</li>
+            <li>Key env vars: <span class="mono">GALILEO_API_KEY</span>, <span class="mono">GALILEO_PROJECT</span>, <span class="mono">GALILEO_LOG_STREAM</span>.</li>
+          </ul>
+        </article>
+      </div>
     </section>
 
     <section class="section anchor-target" id="graph">

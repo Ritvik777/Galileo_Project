@@ -2,6 +2,9 @@
 
 This repository is a **Galileo: AI Marketing Agent with Observations & Evals** built with LangGraph.
 
+This multi-agent system is built for two production workflows in one assistant: **GTM product support** and **outreach content execution**.  
+Each user request is first routed to the correct specialist branch, then processed through branch-specific nodes that gather context, apply business gates (pricing email verification or send intent), and return a final response with full Galileo trace visibility.
+
 - Router decides between **GTM** and **Outreach** behavior
 - GTM branch answers product and pricing questions
 - Outreach branch creates content, finds leads, and can send emails
@@ -90,6 +93,40 @@ evals/run_galileo_evals.py      # baseline evaluation suite
 | Observability / Evals | Galileo |
 
 ---
+
+## How Galileo SDK is used (Tracing + Evals)
+
+Galileo integration in this repo is centralized and explicit:
+
+- **Core helper layer:** `observability/galileo.py`
+  - `ensure_galileo_initialized()` calls `galileo_context.init(...)`
+  - `get_langchain_config(...)` injects `GalileoCallback` into LLM/tool invokes
+  - `log_span(...)` wraps functions with Galileo span decorators
+  - `start_chat_session(...)` starts per-chat Galileo sessions
+  - `get_logger_instance()` returns the active logger for trace/session operations
+
+- **Top-level request trace:** `agents/__init__.py`
+  - `ask(question)` initializes Galileo when enabled
+  - Starts top trace with `logger.start_trace(...)`
+  - Concludes and flushes with `logger.conclude(...)` + `logger.flush()`
+
+- **Node + tool spans:** `agents/router_agent/nodes.py`, `agents/gtm_agent/nodes.py`, `agents/outreach_agent/nodes.py`, `agents/tools.py`
+  - Nodes/tools are decorated with `@log_span(...)`
+  - LLM calls pass `config=get_langchain_config(...)` for callback-level tracing metadata
+
+- **UI session wiring:** `ui/ui.py`
+  - `handle_new_prompt(...)` starts one Galileo session per fresh chat via `start_chat_session(...)`
+  - Optional console links are exposed by `get_console_links()`
+
+- **Eval integration:** `evals/run_galileo_evals.py`
+  - **Sessions mode:** `logger.start_session(...)` per dataset row
+  - **Experiment mode:** `run_experiment(...)` from `galileo.experiments`
+  - Uses same `ask()` path, so eval and production routing logic stay aligned
+
+Required Galileo env vars are in `.env.example`:
+- `GALILEO_API_KEY`
+- `GALILEO_PROJECT`
+- `GALILEO_LOG_STREAM`
 
 ## Setup and run
 

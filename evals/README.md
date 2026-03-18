@@ -1,8 +1,38 @@
 # Galileo Evaluations and Project Run Guide
 
 This folder contains the evaluation harness for the current **multi-agent Galileo Marketing Assistant**.
+The system is designed to run two branches from one entrypoint: **GTM support** and **Outreach execution**.  
+Runtime flow is: classify request -> run branch nodes -> apply gate logic -> produce answer/send action, with Galileo tracing and eval logging across the full path.
 
 **Click here for Technical Understanding Blog:** [https://ritvik777.github.io/Galileo_Project/](https://ritvik777.github.io/Galileo_Project/)
+
+## Galileo SDK placement in code (quick map)
+
+- `observability/galileo.py`
+  - Initializes Galileo context (`ensure_galileo_initialized`)
+  - Adds LangChain callback config (`get_langchain_config`)
+  - Exposes span decorator (`log_span`)
+  - Starts chat sessions (`start_chat_session`)
+  - Returns logger/helpers (`get_logger_instance`, `get_console_links`)
+
+- `agents/__init__.py`
+  - `ask(...)` starts top-level trace with `logger.start_trace(...)`
+  - flush/conclude lifecycle handled in same function
+
+- Node + tool files:
+  - `agents/router_agent/nodes.py`
+  - `agents/gtm_agent/nodes.py`
+  - `agents/outreach_agent/nodes.py`
+  - `agents/tools.py`
+  - Each uses `@log_span(...)`; LLM invokes use `get_langchain_config(...)`
+
+- `ui/ui.py`
+  - Starts one Galileo session per new chat thread via `start_chat_session(...)`
+
+- `evals/run_galileo_evals.py`
+  - Sessions mode: `logger.start_session(...)` per example
+  - Experiment mode: `run_experiment(...)` from Galileo SDK
+  - Uses the same `ask()` runtime path as the app
 
 The app has:
 
