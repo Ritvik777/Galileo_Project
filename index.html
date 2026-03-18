@@ -4,52 +4,88 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Galileo: AI Marketing Agent with Observations & Evals</title>
-  <meta name="description" content="A beginner-friendly explanation of the Galileo multi-agent architecture, graph routing, tools, and evaluations.">
+  <meta name="description" content="Professional technical walkthrough of the Galileo multi-agent architecture, state flow, tools, graph routing, and evaluation framework.">
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
 
     :root {
       --bg: #070910;
-      --bg-2: #090c16;
-      --surface: #0e1222;
-      --surface-2: #0b1020;
+      --surface: #0d1222;
+      --surface-2: #0b101d;
       --ink: #eef2ff;
-      --text: #c4cbe3;
-      --muted: #9aa5c8;
+      --text: #c8d0ea;
+      --muted: #97a4ca;
       --line: #1f2a46;
-      --line-soft: #253255;
-      --node: #121935;
+      --line-soft: #2a3a63;
+      --node: #131b34;
       --purple: #7d7dfc;
-      --green: #6af39a;
+      --green: #63f09a;
       --amber: #ffbe58;
       --pink: #ff5ea8;
-      --shadow: 0 16px 48px rgba(1, 2, 8, 0.46);
+      --shadow: 0 16px 44px rgba(2, 3, 10, 0.42);
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
       font-family: "Manrope", "Segoe UI", sans-serif;
-      background:
-        radial-gradient(1100px 340px at 50% -12%, rgba(125, 125, 252, 0.2), transparent 64%),
-        radial-gradient(900px 280px at 50% -4%, rgba(106, 243, 154, 0.08), transparent 66%),
-        var(--bg);
       color: var(--text);
       line-height: 1.72;
+      background:
+        radial-gradient(1000px 340px at 50% -12%, rgba(125, 125, 252, 0.2), transparent 64%),
+        radial-gradient(820px 260px at 50% -4%, rgba(99, 240, 154, 0.08), transparent 66%),
+        var(--bg);
     }
 
     .container {
-      width: min(1020px, 92vw);
+      width: min(1040px, 92vw);
       margin: 0 auto;
-      padding: 56px 0 104px;
+      padding: 56px 0 108px;
     }
 
     .hero {
       text-align: center;
-      padding: 30px 20px 6px;
-      margin-bottom: 26px;
+      padding: 22px 0 8px;
+      margin-bottom: 24px;
     }
-
+    .toc {
+      position: sticky;
+      top: 10px;
+      z-index: 20;
+      margin: 6px 0 18px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(11, 16, 32, 0.92);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
+    }
+    .toc-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .toc a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #2e3f6b;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      color: #d8e2ff;
+      background: #101a33;
+      transition: all 120ms ease;
+    }
+    .toc a:hover {
+      background: #17264a;
+      border-color: #5f80d8;
+      transform: translateY(-1px);
+    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -69,28 +105,28 @@
     h1, h2, h3 { margin: 0; line-height: 1.2; letter-spacing: -0.02em; }
     h1 {
       font-family: "Cormorant Garamond", serif;
-      font-size: clamp(2.3rem, 6vw, 4.2rem);
+      font-size: clamp(2.3rem, 6vw, 4.1rem);
       color: #f4f6ff;
       margin-bottom: 12px;
       font-weight: 700;
     }
     h2 {
       font-family: "Cormorant Garamond", serif;
-      font-size: clamp(1.8rem, 3.7vw, 2.7rem);
+      font-size: clamp(1.65rem, 3.6vw, 2.55rem);
       margin-bottom: 14px;
       color: #f2f5ff;
       text-align: center;
     }
     h3 {
       font-size: 1.06rem;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       color: #edf1ff;
     }
     p { margin: 0 0 12px; color: var(--text); }
 
     .lead {
       font-size: 1.05rem;
-      max-width: 760px;
+      max-width: 780px;
       color: #b6bfdf;
       margin: 0 auto 18px;
     }
@@ -112,28 +148,19 @@
       color: #d5ddfa;
     }
 
-    .section {
-      background: linear-gradient(180deg, var(--surface), var(--surface-2));
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: clamp(26px, 4vw, 36px);
-      box-shadow: var(--shadow);
-      margin-top: 24px;
-    }
-
-    .spaced { margin-top: 30px; }
-
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
-      margin: 18px 0 10px;
+      margin: 18px 0 14px;
     }
     .kpi {
       border: 1px solid var(--line);
       border-radius: 18px;
       padding: 18px;
-      background: rgba(13, 18, 34, 0.85);
+      background: rgba(12, 18, 35, 0.9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
     .kpi strong {
       display: block;
@@ -142,9 +169,16 @@
       line-height: 1;
       margin-bottom: 8px;
     }
-    .kpi span {
-      font-size: 0.9rem;
-      color: var(--muted);
+    .kpi span { font-size: 0.9rem; color: var(--muted); }
+
+    .section {
+      background: linear-gradient(180deg, var(--surface), var(--surface-2));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: clamp(26px, 4vw, 36px);
+      box-shadow: var(--shadow);
+      margin-top: 22px;
+      overflow: hidden;
     }
 
     .two-col {
@@ -152,24 +186,52 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
-
     .three-col {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
     }
-
     @media (max-width: 960px) {
       .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .two-col, .three-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .kpi-grid { grid-template-columns: 1fr; }
     }
 
     .panel {
       border: 1px solid var(--line);
       border-radius: 16px;
-      background: rgba(15, 20, 38, 0.9);
+      background: rgba(15, 21, 40, 0.9);
       padding: 18px;
+      overflow: hidden;
     }
+    .panel-gtm { border-left: 4px solid var(--green); }
+    .panel-outreach { border-left: 4px solid var(--purple); }
+
+    .mono {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.84rem;
+      background: #10182e;
+      border: 1px solid #24335a;
+      border-radius: 7px;
+      padding: 2px 7px;
+      color: #dbe4ff;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 100%;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    ul { margin: 8px 0 0 20px; color: var(--text); padding-right: 4px; }
+    li {
+      margin-bottom: 8px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
     .step-list {
       margin: 0;
       padding: 0;
@@ -185,33 +247,6 @@
       background: #0f1730;
       color: #d4ddff;
     }
-    .example-block {
-      border: 1px solid #223562;
-      background: #0d152b;
-      border-radius: 12px;
-      padding: 14px;
-      margin-top: 12px;
-    }
-
-    .panel-gtm {
-      border-left: 4px solid var(--green);
-    }
-    .panel-outreach {
-      border-left: 4px solid var(--purple);
-    }
-
-    .mono {
-      font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 0.85rem;
-      background: #10182e;
-      border: 1px solid #24335a;
-      border-radius: 7px;
-      padding: 2px 7px;
-      color: #dbe4ff;
-    }
-
-    ul { margin: 8px 0 0 20px; color: var(--text); }
-    li { margin-bottom: 6px; }
 
     .legend {
       display: flex;
@@ -292,7 +327,7 @@
       marker-end: url(#arrow-amber);
     }
     .edge-label {
-      font-size: 11.3px;
+      font-size: 11.2px;
       fill: #d9e1ff;
       font-family: "JetBrains Mono", ui-monospace, monospace;
     }
@@ -304,6 +339,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 0.94rem;
+      table-layout: fixed;
     }
     th, td {
       text-align: left;
@@ -311,6 +347,8 @@
       padding: 10px 8px;
       vertical-align: top;
       color: #c5cee9;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     th {
       color: #edf2ff;
@@ -325,7 +363,14 @@
       color: #95a2c7;
       font-size: 0.9rem;
     }
-    .tiny { font-size: 0.84rem; color: #95a2c7; text-align: center; margin-top: 12px; }
+    .tiny {
+      font-size: 0.84rem;
+      color: #95a2c7;
+      text-align: center;
+      margin-top: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    .anchor-target { scroll-margin-top: 88px; }
     a { color: #a7bdfd; }
   </style>
 </head>
@@ -334,7 +379,7 @@
     <section class="hero">
       <div class="eyebrow">Technical Walkthrough</div>
       <h1>Galileo: AI Marketing Agent with Observations & Evals</h1>
-      <p class="lead">A step-by-step guide to your real multi-agent architecture: router, GTM and outreach routes, tool usage, evaluation flow, and how one user prompt moves through the graph.</p>
+      <p class="lead">A professional, plain-English walkthrough of your real multi-agent codebase: framework choices, node-level graph flow, state behavior, tool usage, observability, and evaluation pipeline.</p>
       <div class="chip-row">
         <span class="chip">LangGraph</span>
         <span class="chip">Router + GTM + Outreach</span>
@@ -344,6 +389,15 @@
       </div>
     </section>
 
+    <nav class="toc" aria-label="Quick section navigation">
+      <div class="toc-row">
+        <a href="#stack">Stack</a>
+        <a href="#graph">Graph</a>
+        <a href="#state">State</a>
+        <a href="#examples">Examples</a>
+      </div>
+    </nav>
+
     <section class="kpi-grid" aria-label="stats">
       <article class="kpi"><strong>3</strong><span>Agent roles</span></article>
       <article class="kpi"><strong>9</strong><span>LangGraph nodes</span></article>
@@ -351,55 +405,38 @@
       <article class="kpi"><strong>17</strong><span>Eval prompts</span></article>
     </section>
 
-    <section class="section spaced">
-      <h2>Explain it like I am 10</h2>
-      <p>Think of this app like a smart office:</p>
+    <section class="section">
+      <h2>Plain-English Architecture Overview</h2>
+      <p>The assistant behaves like a small team with one coordinator and two specialists:</p>
       <ul>
-        <li><strong>Router Agent</strong> is the front desk deciding where your question should go.</li>
-        <li><strong>GTM Agent</strong> handles product and pricing questions.</li>
-        <li><strong>Outreach Agent</strong> writes marketing content and can send emails when intent is explicit.</li>
+        <li><strong>Router Agent:</strong> reads the user request and picks the best branch.</li>
+        <li><strong>GTM Agent:</strong> handles product, features, comparisons, and pricing logic.</li>
+        <li><strong>Outreach Agent:</strong> handles content generation, lead research, and optional email sending.</li>
       </ul>
-      <p>Each step uses the same shared state backpack: <span class="mono">AgentState</span> with <span class="mono">question</span>, <span class="mono">context</span>, <span class="mono">answer</span>, and trace <span class="mono">steps</span>.</p>
+      <p>All branches use one shared state object, so every node updates the same request context consistently.</p>
     </section>
 
-    <section class="section">
-      <h2>Technical Framework (Line by Line)</h2>
-      <div class="two-col">
-        <article class="panel">
-          <h3>Request processing sequence</h3>
-          <ol class="step-list">
-            <li><span class="mono">ask(question)</span> builds base <span class="mono">AgentState</span> and calls graph.</li>
-            <li><span class="mono">classify</span> sets <span class="mono">agent_type</span> to <span class="mono">gtm</span> or <span class="mono">outreach</span>.</li>
-            <li>Selected branch collects <span class="mono">context</span> through tools.</li>
-            <li>Branch gates update policy fields (<span class="mono">is_pricing</span>, <span class="mono">user_email</span>, <span class="mono">send_requested</span>).</li>
-            <li>Generator node writes <span class="mono">answer</span>; all nodes append to <span class="mono">steps</span>.</li>
-            <li>Flow ends at <span class="mono">END</span> with final state returned to UI/evals.</li>
-          </ol>
-        </article>
-        <article class="panel">
-          <h3>Tree + routing logic</h3>
-          <ul>
-            <li>Root node: <span class="mono">classify</span></li>
-            <li>Child branch A: GTM subtree</li>
-            <li>Child branch B: Outreach subtree</li>
-            <li>GTM has conditional branch at <span class="mono">pricing_gate</span> and <span class="mono">collect_email</span></li>
-            <li>Outreach has conditional branch at <span class="mono">send_gate</span></li>
-            <li>This is a directed acyclic branch graph (no retry loop in current version)</li>
-          </ul>
-          <div class="example-block">
-            <strong>Node responsibilities:</strong>
-            <ul>
-              <li><span class="mono">router_agent</span> -> intent routing</li>
-              <li><span class="mono">gtm_agent</span> -> product/pricing answer path</li>
-              <li><span class="mono">outreach_agent</span> -> content + optional send path</li>
-            </ul>
-          </div>
-        </article>
-      </div>
+    <section class="section anchor-target" id="stack">
+      <h2>Framework and Runtime Stack</h2>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>How it is used in this codebase</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Orchestration</td><td><span class="mono">LangGraph</span></td><td>Node graph in <span class="mono">agents/graph.py</span> with conditional edges for routing.</td></tr>
+          <tr><td>Generation LLM</td><td><span class="mono">ChatAnthropic</span></td><td>Used in router, gates, and generation nodes via <span class="mono">llm.py</span>.</td></tr>
+          <tr><td>Embeddings</td><td><span class="mono">Google Gemini Embeddings</span></td><td>Converts knowledge docs into vectors for Qdrant retrieval.</td></tr>
+          <tr><td>Vector Store</td><td><span class="mono">Qdrant Cloud</span></td><td>Stores chunks and returns similarity-scored context for tool calls.</td></tr>
+          <tr><td>Web Research</td><td><span class="mono">DuckDuckGo</span></td><td>Fallback/augmentation signal for external market context.</td></tr>
+          <tr><td>Lead + Email Ops</td><td><span class="mono">Apollo</span> + <span class="mono">SendGrid</span></td><td>Lead fetch and optional outbound send path in outreach branch.</td></tr>
+          <tr><td>Observability</td><td><span class="mono">Galileo</span></td><td>Spans, traces, sessions, and experiment logging.</td></tr>
+          <tr><td>UI</td><td><span class="mono">Streamlit</span></td><td>Chat UX, graph preview, upload flow, and step trace display.</td></tr>
+        </tbody>
+      </table>
     </section>
 
-    <section class="section">
-      <h2>Live graph from current code</h2>
+    <section class="section anchor-target" id="graph">
+      <h2>Node Graph (Current Runtime)</h2>
       <div class="legend">
         <span><span class="dot" style="background:var(--purple);"></span>Node (function)</span>
         <span><span class="dot" style="background:var(--green);"></span>Edge (always)</span>
@@ -414,7 +451,7 @@
         <svg viewBox="0 0 1200 500" role="img" aria-label="LangGraph routing diagram">
           <defs>
             <marker id="arrow-green" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
-              <path d="M0,0 L10,4 L0,8 z" fill="#6af39a"></path>
+              <path d="M0,0 L10,4 L0,8 z" fill="#63f09a"></path>
             </marker>
             <marker id="arrow-amber" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
               <path d="M0,0 L10,4 L0,8 z" fill="#ffbe58"></path>
@@ -458,54 +495,78 @@
           <text class="edge-label" x="965" y="244">review</text>
         </svg>
       </div>
-      <p class="tiny">Simple view: Router picks GTM or Outreach, then rule checks decide whether flow continues or ends.</p>
+      <p class="tiny">The graph is tree-shaped from a single classifier root, with conditional branch points for pricing and send intent.</p>
+    </section>
+
+    <section class="section anchor-target" id="state">
+      <h2>State Contract and How It Evolves</h2>
+      <table>
+        <thead>
+          <tr><th>State field</th><th>Who writes it</th><th>Purpose</th><th>Typical value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="mono">question</span></td><td><span class="mono">ask()</span></td><td>Original user request</td><td>"What does Galileo cost?"</td></tr>
+          <tr><td><span class="mono">agent_type</span></td><td><span class="mono">classify</span></td><td>Branch selector</td><td><span class="mono">gtm</span> or <span class="mono">outreach</span></td></tr>
+          <tr><td><span class="mono">context</span></td><td><span class="mono">gtm_retrieve</span> / <span class="mono">outreach_research</span></td><td>Tool-generated evidence context</td><td>KB snippets, web notes, leads</td></tr>
+          <tr><td><span class="mono">is_pricing</span></td><td><span class="mono">pricing_gate</span></td><td>Controls pricing branch behavior</td><td><span class="mono">true</span> / <span class="mono">false</span></td></tr>
+          <tr><td><span class="mono">user_email</span></td><td><span class="mono">collect_email</span></td><td>Required for gated pricing output</td><td><span class="mono">ritvik@dauji.ai</span></td></tr>
+          <tr><td><span class="mono">send_requested</span></td><td><span class="mono">send_gate</span></td><td>Controls send vs review routing</td><td><span class="mono">true</span> / <span class="mono">false</span></td></tr>
+          <tr><td><span class="mono">answer</span></td><td><span class="mono">gtm_generate</span> / <span class="mono">outreach_generate</span> / <span class="mono">outreach_send</span></td><td>Final user-facing response</td><td>Generated answer or send summary</td></tr>
+          <tr><td><span class="mono">steps</span></td><td>Every node</td><td>Trace log shown in UI and eval parsing</td><td>["Router -> GTM", "..."]</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section class="section">
-      <h2>Examples (Easy + Technical)</h2>
+      <h2>Node-by-Node Execution Framework</h2>
       <div class="two-col">
-        <article class="panel">
-          <h3>Example 1: Pricing question</h3>
-          <div class="example-block">
-            <p><strong>User:</strong> "What does Galileo cost?"</p>
-            <p><strong>Flow:</strong> <span class="mono">classify -> gtm_retrieve -> pricing_gate -> collect_email</span></p>
-            <p><strong>Result:</strong> asks for verified email before full pricing.</p>
-          </div>
+        <article class="panel panel-gtm">
+          <h3>GTM branch logic</h3>
+          <ol class="step-list">
+            <li><span class="mono">gtm_retrieve</span> gathers internal + web context.</li>
+            <li><span class="mono">pricing_gate</span> decides if email verification is required.</li>
+            <li><span class="mono">collect_email</span> extracts/validates email from question text.</li>
+            <li><span class="mono">gtm_generate</span> composes final grounded answer.</li>
+          </ol>
         </article>
-        <article class="panel">
-          <h3>Example 2: Outreach send request</h3>
-          <div class="example-block">
-            <p><strong>User:</strong> "Send this campaign email to ritvik@dauji.ai"</p>
-            <p><strong>Flow:</strong> <span class="mono">classify -> outreach_research -> outreach_generate -> send_gate -> outreach_send</span></p>
-            <p><strong>Result:</strong> sends via SendGrid and returns send summary.</p>
-          </div>
+        <article class="panel panel-outreach">
+          <h3>Outreach branch logic</h3>
+          <ol class="step-list">
+            <li><span class="mono">outreach_research</span> selects Apollo+KB or KB+web tool mix.</li>
+            <li><span class="mono">outreach_generate</span> drafts post/email content.</li>
+            <li><span class="mono">send_gate</span> resolves "send now" vs "review only".</li>
+            <li><span class="mono">outreach_send</span> performs SendGrid delivery if approved.</li>
+          </ol>
         </article>
       </div>
     </section>
 
-    <section class="two-col section">
-      <article class="panel panel-gtm">
-        <h3>GTM path</h3>
-        <ul>
-          <li><span class="mono">gtm_retrieve</span> gathers context from knowledge base + web.</li>
-          <li><span class="mono">pricing_gate</span> checks if pricing was requested.</li>
-          <li><span class="mono">collect_email</span> requires verified email for pricing details.</li>
-          <li><span class="mono">gtm_generate</span> returns final product answer.</li>
-        </ul>
-      </article>
-      <article class="panel panel-outreach">
-        <h3>Outreach path</h3>
-        <ul>
-          <li><span class="mono">outreach_research</span> uses Apollo for lead requests, else KB + web.</li>
-          <li><span class="mono">outreach_generate</span> drafts content.</li>
-          <li><span class="mono">send_gate</span> decides send vs review.</li>
-          <li><span class="mono">outreach_send</span> sends via SendGrid when requested.</li>
-        </ul>
-      </article>
+    <section class="section anchor-target" id="examples">
+      <h2>Examples: End-to-End Requests</h2>
+      <div class="three-col">
+        <article class="panel">
+          <h3>Example A - Pricing</h3>
+          <p><strong>User:</strong> "What does Galileo cost?"</p>
+          <p><strong>Path:</strong> <span class="mono">classify -> gtm_retrieve -> pricing_gate -> collect_email</span></p>
+          <p><strong>Outcome:</strong> asks for verified email before full pricing details.</p>
+        </article>
+        <article class="panel">
+          <h3>Example B - Content draft</h3>
+          <p><strong>User:</strong> "Write a LinkedIn post for AI platform teams."</p>
+          <p><strong>Path:</strong> <span class="mono">classify -> outreach_research -> outreach_generate -> send_gate(review)</span></p>
+          <p><strong>Outcome:</strong> returns draft only, no email sent.</p>
+        </article>
+        <article class="panel">
+          <h3>Example C - Send request</h3>
+          <p><strong>User:</strong> "Send this to ritvik@dauji.ai now."</p>
+          <p><strong>Path:</strong> <span class="mono">classify -> outreach_research -> outreach_generate -> send_gate(send) -> outreach_send</span></p>
+          <p><strong>Outcome:</strong> sends via SendGrid and returns send status summary.</p>
+        </article>
+      </div>
     </section>
 
     <section class="section">
-      <h2>Project map</h2>
+      <h2>Project Map and Responsibilities</h2>
       <table>
         <thead><tr><th>Area</th><th>Main files</th><th>Responsibility</th></tr></thead>
         <tbody>
@@ -516,41 +577,33 @@
           <tr><td>Outreach</td><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Research, generate content, send intent, and delivery.</td></tr>
           <tr><td>Tools</td><td><span class="mono">agents/tools.py</span></td><td>KB search, web search, Apollo lookup, SendGrid email.</td></tr>
           <tr><td>Vector DB</td><td><span class="mono">vector_db/*</span></td><td>Chunking, embeddings, and Qdrant store/search.</td></tr>
-          <tr><td>Evals</td><td><span class="mono">evals/run_galileo_evals.py</span></td><td>17-case eval suite in sessions or experiment mode.</td></tr>
+          <tr><td>Observability</td><td><span class="mono">observability/galileo.py</span></td><td>Galileo spans, traces, sessions, callback wiring.</td></tr>
+          <tr><td>Evals</td><td><span class="mono">evals/run_galileo_evals.py</span></td><td>17-case eval suite and tool coverage checks.</td></tr>
         </tbody>
       </table>
     </section>
 
-    <section class="three-col section">
-      <article class="panel">
-        <h3>Core tools</h3>
-        <ul>
-          <li><span class="mono">search_knowledge_base(query)</span></li>
-          <li><span class="mono">web_search(query)</span></li>
-          <li><span class="mono">apollo_search(job_titles,...)</span></li>
-          <li><span class="mono">send_email(to, subject, html)</span></li>
-        </ul>
-      </article>
-      <article class="panel">
-        <h3>State fields</h3>
-        <ul>
-          <li><span class="mono">question</span>, <span class="mono">agent_type</span>, <span class="mono">context</span></li>
-          <li><span class="mono">answer</span>, <span class="mono">is_pricing</span>, <span class="mono">user_email</span></li>
-          <li><span class="mono">send_requested</span>, <span class="mono">steps</span></li>
-        </ul>
-      </article>
-      <article class="panel">
-        <h3>Deploy this page</h3>
-        <ul>
-          <li>GitHub Pages -> Deploy from a branch</li>
-          <li>Branch: <span class="mono">main</span></li>
-          <li>Folder: <span class="mono">/(root)</span></li>
-          <li>Keep file as <span class="mono">index.html</span> in root</li>
-        </ul>
-      </article>
+    <section class="section">
+      <h2>Deploy and Read the Full Walkthrough</h2>
+      <div class="two-col">
+        <article class="panel">
+          <h3>GitHub Pages setup</h3>
+          <ul>
+            <li>Pages source: <span class="mono">Deploy from a branch</span></li>
+            <li>Branch: <span class="mono">main</span></li>
+            <li>Folder: <span class="mono">/(root)</span></li>
+            <li>Keep this file as <span class="mono">index.html</span> in repository root</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Technical understanding blog link</h3>
+          <p>Open the live page here:</p>
+          <p><a href="https://ritvik777.github.io/Galileo_Project/">https://ritvik777.github.io/Galileo_Project/</a></p>
+        </article>
+      </div>
     </section>
 
-    <p class="footer">Built from your current multi-agent code path. Updated with cleaner spacing and reference-inspired readability.</p>
+    <p class="footer">Built from your current multi-agent code path, formatted as a production-style technical blog for both beginners and engineers.</p>
   </main>
 
   <script>

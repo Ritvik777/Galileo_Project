@@ -7,7 +7,7 @@ This repository is a **Galileo: AI Marketing Agent with Observations & Evals** b
 - Outreach branch creates content, finds leads, and can send emails
 - Full observability with Galileo tracing/session support
 
-Project explainer page (GitHub Pages): `index.html`
+Project explainer page (GitHub Pages): [Click here for Technical Understanding Blog](https://ritvik777.github.io/Galileo_Project/)
 
 ---
 
