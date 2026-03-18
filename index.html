@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galileo Marketing Assistant - Explained Simply</title>
+  <meta name="description" content="A beginner-friendly guide to the Galileo multi-agent LangGraph project: agents, nodes, graph routes, tools, evals, and deployment.">
+  <style>
+    :root {
+      --bg: #f4f4f2;
+      --ink: #0f0f0f;
+      --muted: #4b4b4b;
+      --card: #ffffff;
+      --line: #d7d7d7;
+      --accent: #111111;
+      --accent-soft: #ececec;
+      --ok: #dcefdc;
+      --warn: #f6ead5;
+      --info: #dde8f8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    .wrap {
+      width: min(1120px, 92vw);
+      margin: 0 auto;
+      padding: 28px 0 80px;
+    }
+    .hero {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin: 0 0 10px;
+      letter-spacing: -0.02em;
+    }
+    h1 { font-size: clamp(1.9rem, 3.5vw, 3rem); }
+    h2 { font-size: clamp(1.25rem, 2.2vw, 2rem); margin-top: 16px; }
+    h3 { font-size: 1.05rem; margin-top: 10px; }
+    p { margin: 0 0 10px; color: var(--muted); }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.93rem;
+      background: var(--accent-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 2px 8px;
+      color: var(--ink);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .kpi { grid-column: span 3; }
+    .kpi strong { display: block; font-size: 1.8rem; color: var(--ink); }
+    .kpi span { color: var(--muted); font-size: 0.9rem; }
+    .full { grid-column: span 12; }
+    .half { grid-column: span 6; }
+    .third { grid-column: span 4; }
+    @media (max-width: 900px) {
+      .kpi, .half, .third { grid-column: span 12; }
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 4px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 0.85rem;
+      color: var(--ink);
+    }
+    .note { border-left: 4px solid var(--ink); padding-left: 10px; }
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border-radius: 999px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .controls { margin: 8px 0 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .controls button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 8px 11px;
+      cursor: pointer;
+      color: var(--ink);
+      font-size: 0.9rem;
+    }
+    .controls button:hover { background: #f8f8f8; }
+    .graph-wrap {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      overflow: auto;
+      padding: 8px;
+    }
+    svg { width: 100%; min-width: 930px; height: auto; }
+    .node rect {
+      fill: #ffffff;
+      stroke: #1a1a1a;
+      stroke-width: 1.3;
+      rx: 12;
+    }
+    .node text {
+      fill: #111;
+      font-size: 13px;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+    .edge {
+      fill: none;
+      stroke: #111;
+      stroke-width: 1.6;
+      marker-end: url(#arrow);
+    }
+    .edge.label-free { stroke-dasharray: 4 4; }
+    .edge-label {
+      font-size: 11.5px;
+      fill: #444;
+      background: #fff;
+    }
+    .dim { opacity: 0.2; transition: opacity 180ms ease; }
+    .highlight rect { fill: #f8f8f8; }
+    .path-highlight { stroke-width: 2.7; }
+    .box-ok { background: var(--ok); }
+    .box-warn { background: var(--warn); }
+    .box-info { background: var(--info); }
+    ul { margin: 8px 0 0 18px; color: var(--muted); }
+    li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 9px 8px;
+      vertical-align: top;
+    }
+    th { color: #191919; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    .footer {
+      margin-top: 18px;
+      color: #525252;
+      font-size: 0.9rem;
+    }
+    .tiny { font-size: 0.84rem; color: #666; }
+    a { color: #0f0f0f; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Galileo Marketing Assistant, explained like you are 10</h1>
+      <p>This page documents your <strong>real codebase</strong> (agents, nodes, graph routes, tools, evals, UI, observability), in beginner language.</p>
+      <p class="note">Reference inspiration and visual style direction: <a href="https://ritvik777.github.io/Introduction-to-RAG/" target="_blank" rel="noreferrer">Introduction to RAG</a></p>
+      <div class="pill-row">
+        <span class="pill">LangGraph</span>
+        <span class="pill">Router + 2 Specialist Agents</span>
+        <span class="pill">Qdrant + Gemini Embeddings</span>
+        <span class="pill">Anthropic LLM</span>
+        <span class="pill">Galileo Tracing + Evals</span>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="stats">
+      <article class="card kpi"><strong>3</strong><span>Agent roles (Router, GTM, Outreach)</span></article>
+      <article class="card kpi"><strong>9</strong><span>LangGraph nodes in runtime flow</span></article>
+      <article class="card kpi"><strong>4</strong><span>Core tools (KB, Web, Apollo, SendGrid)</span></article>
+      <article class="card kpi"><strong>17</strong><span>Baseline eval prompts</span></article>
+    </section>
+
+    <section class="card full">
+      <h2>Step 1: Basic idea</h2>
+      <p>Imagine a smart school office:</p>
+      <ul>
+        <li><strong>Router Agent</strong> is the receptionist. It decides which expert should help.</li>
+        <li><strong>GTM Agent</strong> answers product and pricing questions using your docs and web context.</li>
+        <li><strong>Outreach Agent</strong> writes marketing content, finds leads, and can send emails if user intent is explicit.</li>
+      </ul>
+      <p>The system passes around one shared state object called <span class="mono">AgentState</span> with fields like <span class="mono">question</span>, <span class="mono">context</span>, <span class="mono">answer</span>, and trace <span class="mono">steps</span>.</p>
+    </section>
+
+    <section class="card full">
+      <h2>Step 2: Live graph of your actual pipeline</h2>
+      <div class="legend">
+        <span><span class="dot" style="background:#111;"></span>normal edge</span>
+        <span><span class="dot" style="background:#555;"></span>dashed = conditional route</span>
+      </div>
+      <div class="controls">
+        <button data-mode="all">Show Full Flow</button>
+        <button data-mode="gtm">Highlight GTM Route</button>
+        <button data-mode="outreach">Highlight Outreach Route</button>
+      </div>
+      <div class="graph-wrap">
+        <svg viewBox="0 0 1200 490" role="img" aria-label="LangGraph routing diagram">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L10,4 L0,8 z" fill="#111"></path>
+            </marker>
+          </defs>
+
+          <g id="n-start" class="node"><rect x="24" y="200" width="110" height="56"></rect><text x="79" y="228">START</text></g>
+          <g id="n-classify" class="node"><rect x="174" y="200" width="140" height="56"></rect><text x="244" y="228">classify</text></g>
+
+          <g id="n-gtm-retrieve" class="node"><rect x="360" y="85" width="170" height="56"></rect><text x="445" y="113">gtm_retrieve</text></g>
+          <g id="n-pricing" class="node"><rect x="570" y="85" width="150" height="56"></rect><text x="645" y="113">pricing_gate</text></g>
+          <g id="n-email" class="node"><rect x="760" y="85" width="145" height="56"></rect><text x="832" y="113">collect_email</text></g>
+          <g id="n-gtm-gen" class="node"><rect x="942" y="85" width="145" height="56"></rect><text x="1014" y="113">gtm_generate</text></g>
+
+          <g id="n-out-research" class="node"><rect x="360" y="322" width="190" height="56"></rect><text x="455" y="350">outreach_research</text></g>
+          <g id="n-out-gen" class="node"><rect x="590" y="322" width="190" height="56"></rect><text x="685" y="350">outreach_generate</text></g>
+          <g id="n-send-gate" class="node"><rect x="820" y="322" width="140" height="56"></rect><text x="890" y="350">send_gate</text></g>
+          <g id="n-send" class="node"><rect x="995" y="322" width="140" height="56"></rect><text x="1065" y="350">outreach_send</text></g>
+
+          <g id="n-end" class="node"><rect x="1128" y="200" width="70" height="56"></rect><text x="1163" y="228">END</text></g>
+
+          <path id="e-start-classify" class="edge" d="M134 228 L174 228"></path>
+          <path id="e-classify-gtm" class="edge label-free edge-gtm" d="M314 210 C336 180, 335 130, 360 113"></path>
+          <path id="e-classify-out" class="edge label-free edge-outreach" d="M314 246 C337 285, 336 338, 360 350"></path>
+
+          <path id="e-gtm-retrieve-pricing" class="edge edge-gtm" d="M530 113 L570 113"></path>
+          <path id="e-pricing-gtm-gen" class="edge label-free edge-gtm" d="M720 98 C790 52, 890 58, 942 98"></path>
+          <path id="e-pricing-email" class="edge label-free edge-gtm" d="M720 113 L760 113"></path>
+          <path id="e-email-gtm-gen" class="edge label-free edge-gtm" d="M905 113 L942 113"></path>
+          <path id="e-gtm-end" class="edge edge-gtm" d="M1087 113 C1130 113, 1140 170, 1142 200"></path>
+          <path id="e-email-end" class="edge label-free edge-gtm" d="M833 141 C833 185, 1070 215, 1128 228"></path>
+
+          <path id="e-out-research-gen" class="edge edge-outreach" d="M550 350 L590 350"></path>
+          <path id="e-out-gen-sendgate" class="edge edge-outreach" d="M780 350 L820 350"></path>
+          <path id="e-sendgate-send" class="edge label-free edge-outreach" d="M960 350 L995 350"></path>
+          <path id="e-sendgate-end" class="edge label-free edge-outreach" d="M890 322 C900 255, 1088 232, 1128 228"></path>
+          <path id="e-send-end" class="edge edge-outreach" d="M1135 350 C1160 350, 1160 265, 1160 256"></path>
+
+          <text class="edge-label" x="332" y="184">gtm</text>
+          <text class="edge-label" x="334" y="315">outreach</text>
+          <text class="edge-label" x="764" y="64">not_pricing</text>
+          <text class="edge-label" x="731" y="136">pricing</text>
+          <text class="edge-label" x="908" y="102">valid</text>
+          <text class="edge-label" x="922" y="212">no_email</text>
+          <text class="edge-label" x="970" y="314">send</text>
+          <text class="edge-label" x="965" y="244">review</text>
+        </svg>
+      </div>
+      <p class="tiny">Child version: the receptionist picks a hallway (GTM or Outreach). Each hallway has checkpoints before final answer. Some checkpoints can end early.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card half box-info">
+        <h3>GTM lane (product + pricing)</h3>
+        <ul>
+          <li><span class="mono">gtm_retrieve</span>: gather context from Qdrant docs + web.</li>
+          <li><span class="mono">pricing_gate</span>: asks "is this pricing?"</li>
+          <li>If yes, <span class="mono">collect_email</span> enforces email gate.</li>
+          <li><span class="mono">gtm_generate</span> writes final grounded answer.</li>
+        </ul>
+      </article>
+      <article class="card half box-warn">
+        <h3>Outreach lane (content + sending)</h3>
+        <ul>
+          <li><span class="mono">outreach_research</span>: uses Apollo for leads, else KB + web.</li>
+          <li><span class="mono">outreach_generate</span>: drafts post/email from context.</li>
+          <li><span class="mono">send_gate</span>: send now vs review-only decision.</li>
+          <li><span class="mono">outreach_send</span>: extracts emails and sends via SendGrid.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="card full">
+      <h2>Step 3: Project map (one file per concern)</h2>
+      <table>
+        <thead>
+          <tr><th>Area</th><th>Main files</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>App UI</td><td><span class="mono">app.py</span>, <span class="mono">ui/ui.py</span></td><td>Streamlit chat, sidebar, graph image, pipeline trace, upload docs.</td></tr>
+          <tr><td>Graph wiring</td><td><span class="mono">agents/graph.py</span>, <span class="mono">agents/state.py</span></td><td>Defines node topology and shared state contract.</td></tr>
+          <tr><td>Router</td><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Rule-first + LLM fallback classification into GTM or Outreach.</td></tr>
+          <tr><td>GTM branch</td><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>Retrieval, pricing gate, email gate, answer generation.</td></tr>
+          <tr><td>Outreach branch</td><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Lead research, content generation, send gate, sending emails.</td></tr>
+          <tr><td>Tools</td><td><span class="mono">agents/tools.py</span></td><td>Tool wrappers + tool-calling loop with duplicate-call guard.</td></tr>
+          <tr><td>Vector DB</td><td><span class="mono">vector_db/database.py</span>, <span class="mono">chunker.py</span>, <span class="mono">embeddings.py</span></td><td>Chunk, embed, store/search documents in Qdrant.</td></tr>
+          <tr><td>Model + config</td><td><span class="mono">llm.py</span>, <span class="mono">config.py</span></td><td>Anthropic model selection and env-driven config.</td></tr>
+          <tr><td>Observability</td><td><span class="mono">observability/galileo.py</span></td><td>Galileo sessions/traces/callbacks and debug links.</td></tr>
+          <tr><td>Evals</td><td><span class="mono">evals/run_galileo_evals.py</span></td><td>17-case baseline suite with session and experiment modes.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid">
+      <article class="card third">
+        <h3>Step 4: Tools the agents can use</h3>
+        <ul>
+          <li><span class="mono">search_knowledge_base(query)</span></li>
+          <li><span class="mono">web_search(query)</span></li>
+          <li><span class="mono">apollo_search(job_titles,...)</span></li>
+          <li><span class="mono">send_email(to, subject, html)</span></li>
+        </ul>
+      </article>
+      <article class="card third">
+        <h3>Step 5: State fields</h3>
+        <ul>
+          <li><span class="mono">question</span>: user input</li>
+          <li><span class="mono">agent_type</span>: gtm or outreach</li>
+          <li><span class="mono">context</span>: tool outputs</li>
+          <li><span class="mono">answer</span>: final response</li>
+          <li><span class="mono">steps</span>: trace list (appended across nodes)</li>
+        </ul>
+      </article>
+      <article class="card third">
+        <h3>Step 6: Evals overview</h3>
+        <ul>
+          <li>17 prompts across GTM, outreach, send, leads, adversarial, mixed.</li>
+          <li>Tracks expected tool coverage in sessions mode.</li>
+          <li>Can run as Galileo experiment with env switch.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="card full">
+      <h2>Step 7: End-to-end in one sentence</h2>
+      <p>User asks question -> Router chooses expert -> expert collects context with tools -> gates handle safety/business rules (pricing email or send intent) -> expert generates answer -> optional send executes -> every step is logged for traces/evals.</p>
+    </section>
+
+    <section class="card full">
+      <h2>GitHub deployment notes</h2>
+      <p>This repo includes a Pages workflow that publishes this file automatically. Keep this page as <span class="mono">index.html</span> at repo root, and push to <span class="mono">main</span> or <span class="mono">master</span>.</p>
+      <p class="tiny">If Pages is not yet enabled for Actions in your repository settings, enable GitHub Pages with source set to "GitHub Actions" once.</p>
+    </section>
+
+    <p class="footer">Built from your live code architecture, in the same teaching spirit as your RAG walkthrough. Updated for your current multi-agent graph design.</p>
+  </main>
+
+  <script>
+    (function () {
+      const nodeIds = [
+        "n-start", "n-classify",
+        "n-gtm-retrieve", "n-pricing", "n-email", "n-gtm-gen",
+        "n-out-research", "n-out-gen", "n-send-gate", "n-send", "n-end"
+      ];
+      const edgeIds = [
+        "e-start-classify",
+        "e-classify-gtm", "e-gtm-retrieve-pricing", "e-pricing-gtm-gen", "e-pricing-email", "e-email-gtm-gen", "e-gtm-end", "e-email-end",
+        "e-classify-out", "e-out-research-gen", "e-out-gen-sendgate", "e-sendgate-send", "e-sendgate-end", "e-send-end"
+      ];
+      const gtmEdges = [
+        "e-start-classify", "e-classify-gtm", "e-gtm-retrieve-pricing", "e-pricing-email", "e-email-gtm-gen", "e-pricing-gtm-gen", "e-gtm-end", "e-email-end"
+      ];
+      const outreachEdges = [
+        "e-start-classify", "e-classify-out", "e-out-research-gen", "e-out-gen-sendgate", "e-sendgate-send", "e-sendgate-end", "e-send-end"
+      ];
+      const gtmNodes = ["n-start", "n-classify", "n-gtm-retrieve", "n-pricing", "n-email", "n-gtm-gen", "n-end"];
+      const outNodes = ["n-start", "n-classify", "n-out-research", "n-out-gen", "n-send-gate", "n-send", "n-end"];
+
+      function get(id) { return document.getElementById(id); }
+      function dimAll() {
+        nodeIds.forEach((id) => get(id).classList.add("dim"));
+        edgeIds.forEach((id) => get(id).classList.add("dim"));
+      }
+      function clearAll() {
+        nodeIds.forEach((id) => get(id).classList.remove("dim", "highlight"));
+        edgeIds.forEach((id) => get(id).classList.remove("dim", "path-highlight"));
+      }
+      function mark(nodes, edges) {
+        nodes.forEach((id) => get(id).classList.add("highlight"));
+        edges.forEach((id) => get(id).classList.add("path-highlight"));
+      }
+
+      document.querySelectorAll(".controls button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const mode = btn.getAttribute("data-mode");
+          clearAll();
+          if (mode === "all") { return; }
+          dimAll();
+          if (mode === "gtm") {
+            gtmNodes.forEach((id) => get(id).classList.remove("dim"));
+            gtmEdges.forEach((id) => get(id).classList.remove("dim"));
+            mark(gtmNodes, gtmEdges);
+            return;
+          }
+          if (mode === "outreach") {
+            outNodes.forEach((id) => get(id).classList.remove("dim"));
+            outreachEdges.forEach((id) => get(id).classList.remove("dim"));
+            mark(outNodes, outreachEdges);
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
