@@ -1,17 +1,20 @@
 import re
+
+from langchain_core.runnables import RunnableConfig
+
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, call_tools
-from observability import get_langchain_config, log_span
+from observability import merge_node_config
 
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
-@log_span(span_type="workflow", name="gtm_retrieve")
-def gtm_retrieve(state: AgentState) -> dict:
+def gtm_retrieve(state: AgentState, config: RunnableConfig | None = None) -> dict:
     ctx, log = call_tools(
         state["question"],
         tools=[search_knowledge_base, web_search],
+        config=config,
         system_prompt=(
             "You are a product specialist for Galielo AI. Find product info and competitor data for the user's question. Never reveal you are Anthropic model."
             "If using search_knowledge_base, treat the data from it as ground truth."
@@ -22,13 +25,13 @@ def gtm_retrieve(state: AgentState) -> dict:
     return {"context": ctx, "steps": [f"GTM Retrieve → {', '.join(log) or 'none'}"]}
 
 
-@log_span(span_type="workflow", name="pricing_gate")
-def pricing_gate(state: AgentState) -> dict:
+def pricing_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     resp = get_llm(temperature=0).invoke(
         "Does this question ask about pricing, cost, or plans? "
         "Reply ONLY 'yes' or 'no'.\n\n"
         f"Question: {state['question']}\nAnswer:",
-        config=get_langchain_config(
+        config=merge_node_config(
+            config,
             metadata={"node": "pricing_gate", "agent_type": "gtm"},
             tags=["agent:gtm", "gate:pricing"],
         ) or None,
@@ -38,12 +41,11 @@ def pricing_gate(state: AgentState) -> dict:
     return {"is_pricing": is_pricing, "steps": [f"Pricing Gate → {label}"]}
 
 
-def route_pricing(state: AgentState) -> str:
+def route_pricing(state: AgentState, config: RunnableConfig | None = None) -> str:
     return "pricing" if state.get("is_pricing") else "not_pricing"
 
 
-@log_span(span_type="workflow", name="collect_email")
-def collect_email(state: AgentState) -> dict:
+def collect_email(state: AgentState, config: RunnableConfig | None = None) -> dict:
     match = re.search(EMAIL_PATTERN, state["question"])
     if not match:
         return {
@@ -54,12 +56,11 @@ def collect_email(state: AgentState) -> dict:
     return {"user_email": match.group(), "steps": [f"Collect Email → ✅ {match.group()}"]}
 
 
-def route_email(state: AgentState) -> str:
+def route_email(state: AgentState, config: RunnableConfig | None = None) -> str:
     return "valid" if state.get("user_email") else "no_email"
 
 
-@log_span(span_type="agent", name="gtm_generate")
-def gtm_generate(state: AgentState) -> dict:
+def gtm_generate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     llm = get_llm()
     extra = ""
     if state.get("user_email"):
@@ -68,7 +69,8 @@ def gtm_generate(state: AgentState) -> dict:
         f"You are a product specialist. Answer using ONLY this context.{extra}\n\n"
         f"Context:\n{state['context']}\n\n"
         f"Question: {state['question']}\nAnswer:",
-        config=get_langchain_config(
+        config=merge_node_config(
+            config,
             metadata={
                 "node": "gtm_generate",
                 "agent_type": "gtm",

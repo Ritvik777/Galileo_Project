@@ -1,10 +1,11 @@
+from langchain_core.runnables import RunnableConfig
+
 from agents.state import AgentState
 from llm import get_llm
-from observability import get_langchain_config, log_span
+from observability import merge_node_config
 
-#@log_span wraps this call for observability tracking.
-@log_span(span_type="agent", name="Supervisor Routing Agent")
-def classify(state: AgentState) -> dict:
+# GalileoCallback (via graph.invoke config) logs this node; no @log_span to avoid duplicate spans.
+def classify(state: AgentState, config: RunnableConfig | None = None) -> dict:
     """LLM reads the message and picks: 'gtm' or 'outreach'."""
     llm = get_llm(temperature=0)
     resp = llm.invoke(
@@ -12,7 +13,8 @@ def classify(state: AgentState) -> dict:
         "gtm = product questions, features, pricing, comparisons\n"
         "outreach = write email, LinkedIn post, marketing content\n\n"
         f"Message: {state['question']}\nCategory:",
-        config=get_langchain_config(
+        config=merge_node_config(
+            config,
             metadata={"node": "classify", "question": state["question"]},
             tags=["agent:supervisor_routing"],
         ) or None,
@@ -22,8 +24,8 @@ def classify(state: AgentState) -> dict:
         agent = "gtm"
     return {"agent_type": agent, "steps": [f"Supervisor Routing Agent → {agent.upper()}"]}
 
-#LangGraph uses this to decide which subgraph runs next (GTM vs Outreach).
-def route(state: AgentState) -> str:
+# LangGraph uses this to decide which subgraph runs next (GTM vs Outreach).
+def route(state: AgentState, config: RunnableConfig | None = None) -> str:
     return state["agent_type"]
 
 

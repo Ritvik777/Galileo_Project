@@ -1,8 +1,12 @@
 import re
+from typing import Any
+
+from langchain_core.runnables import RunnableConfig
+
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, apollo_search, send_email, call_tools
-from observability import get_langchain_config, log_span
+from observability import merge_node_config
 
 
 LEAD_KEYWORDS = {"research leads", "find leads", "find prospects", "find companies", "find people", "who can i", "prospect", "leads for"}
@@ -30,7 +34,7 @@ def _extract_emails(text: str) -> list[str]:
     return re.findall(EMAIL_PATTERN, text)
 
 
-def _llm_send_decision(question: str, draft: str) -> str | None:
+def _llm_send_decision(question: str, draft: str, config: RunnableConfig | None = None) -> str | None:
     try:
         llm = get_llm(temperature=0)
         resp = llm.invoke(
@@ -43,7 +47,8 @@ def _llm_send_decision(question: str, draft: str) -> str | None:
             f"User message: {question}\n"
             f"Current draft preview: {draft[:400]}\n"
             "Decision:",
-            config=get_langchain_config(
+            config=merge_node_config(
+                config,
                 metadata={"node": "send_gate_decision", "agent_type": "outreach"},
                 tags=["agent:outreach", "gate:send"],
             ) or None,
@@ -58,14 +63,14 @@ def _llm_send_decision(question: str, draft: str) -> str | None:
         return None
 
 
-@log_span(span_type="workflow", name="outreach_research")
-def outreach_research(state: AgentState) -> dict:
+def outreach_research(state: AgentState, config: RunnableConfig | None = None) -> dict:
     q = state["question"]
 
     if _wants_leads(q):
         ctx, log = call_tools(
             q,
             tools=[apollo_search, search_knowledge_base],
+            config=config,
             system_prompt=(
                 "The user wants to find leads/prospects. You MUST:\n"
                 "1. Call apollo_search with relevant job titles (e.g. 'VP Engineering, CTO, Head of AI') "
@@ -78,6 +83,7 @@ def outreach_research(state: AgentState) -> dict:
         ctx, log = call_tools(
             q,
             tools=[search_knowledge_base, web_search],
+            config=config,
             system_prompt=(
                 "Find product info and target audience data for creating content. "
                 "Use search_knowledge_base for product talking points. "
@@ -88,8 +94,7 @@ def outreach_research(state: AgentState) -> dict:
     return {"context": ctx, "steps": [f"Outreach Research → {', '.join(log) or 'none'}"]}
 
 
-@log_span(span_type="agent", name="outreach_generate")
-def outreach_generate(state: AgentState) -> dict:
+def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     llm = get_llm(temperature=0.7)
 
     ctx = state.get("context", "")
@@ -139,7 +144,8 @@ def outreach_generate(state: AgentState) -> dict:
 
     resp = llm.invoke(
         prompt,
-        config=get_langchain_config(
+        config=merge_node_config(
+            config,
             metadata={
                 "node": "outreach_generate",
                 "agent_type": "outreach",
@@ -151,9 +157,8 @@ def outreach_generate(state: AgentState) -> dict:
     return {"answer": resp.content, "steps": [f"Outreach Generate → {len(resp.content)} chars"]}
 
 
-@log_span(span_type="workflow", name="send_gate")
-def send_gate(state: AgentState) -> dict:
-    llm_decision = _llm_send_decision(state["question"], state.get("answer", ""))
+def send_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
+    llm_decision = _llm_send_decision(state["question"], state.get("answer", ""), config)
     if llm_decision is None:
         should_send = _should_send(state["question"])
         source = "rule-fallback"
@@ -164,12 +169,11 @@ def send_gate(state: AgentState) -> dict:
     return {"send_requested": should_send, "steps": [f"Send Gate({source}) → {label}"]}
 
 
-def route_send(state: AgentState) -> str:
+def route_send(state: AgentState, config: RunnableConfig | None = None) -> str:
     return "send" if state.get("send_requested") else "review"
 
 
-@log_span(span_type="tool", name="outreach_send")
-def outreach_send(state: AgentState) -> dict:
+def outreach_send(state: AgentState, config: RunnableConfig | None = None) -> dict:
     content = state["answer"]
     emails_found = _extract_emails(content)
 
@@ -198,6 +202,11 @@ def outreach_send(state: AgentState) -> dict:
     sent = []
     failed = []
 
+    invoke_config = merge_node_config(
+        config,
+        metadata={"node": "outreach_send"},
+        tags=["agent:outreach", "tool:send_email"],
+    )
     for to in emails_found:
         html = f"""
         <div style="font-family: -apple-system, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a; line-height: 1.6;">
@@ -207,7 +216,7 @@ def outreach_send(state: AgentState) -> dict:
         </div>
         """
 
-        result = send_email.invoke({"to_email": to, "subject": subject, "html_body": html})
+        result = send_email.invoke({"to_email": to, "subject": subject, "html_body": html}, config=invoke_config)
         if "SENT" in result:
             sent.append(to)
         else:

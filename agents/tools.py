@@ -2,12 +2,11 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from vector_db import search_with_scores
 from llm import get_llm
-from observability import get_langchain_config, log_span
+from observability import get_langchain_config, merge_node_config, log_span
 import json
 
 
 @tool
-@log_span(span_type="tool", name="search_knowledge_base")
 def search_knowledge_base(query: str) -> str:
     """Search internal product docs stored in Qdrant."""
     results = search_with_scores(query, top_k=4)
@@ -17,7 +16,6 @@ def search_knowledge_base(query: str) -> str:
 
 
 @tool
-@log_span(span_type="tool", name="web_search")
 def web_search(query: str) -> str:
     """Search the live web via DuckDuckGo."""
     from duckduckgo_search import DDGS
@@ -37,7 +35,6 @@ def web_search(query: str) -> str:
 
 
 @tool
-@log_span(span_type="tool", name="apollo_search")
 def apollo_search(job_titles: str, location: str = "", industry: str = "", limit: int = 5) -> str:
     """Search Apollo.io for leads by job title, location, and industry. Returns names, titles, companies, and verified emails for outreach."""
     import os
@@ -149,9 +146,11 @@ def send_email(to_email: str, subject: str, html_body: str) -> str:
         return f"ERROR: {e}"
 
 
-@log_span(span_type="workflow", name="call_tools")
-def call_tools(question, tools, system_prompt):
-    """LLM picks which tools to call, runs them, returns results."""
+# GalileoCallback (via gtm_retrieve/outreach_research nodes) logs LLM + tool calls;
+# no @log_span to avoid duplicate call_tools span (same work as gtm_retrieve).
+def call_tools(question, tools, system_prompt, config=None):
+    """LLM picks which tools to call, runs them, returns results.
+    Pass config from the graph so LLM/tool spans nest under the parent node."""
     tool_map = {t.name: t for t in tools}
     try:
         llm = get_llm().bind_tools(tools)
@@ -161,7 +160,8 @@ def call_tools(question, tools, system_prompt):
 
     log = []
     seen_calls = set()
-    invoke_config = get_langchain_config(
+    invoke_config = merge_node_config(
+        config,
         metadata={"component": "tools", "question": question},
         tags=["agent:shared", "phase:tool-routing"],
     )
@@ -179,8 +179,18 @@ def call_tools(question, tools, system_prompt):
                 msgs.append(ToolMessage(content="Skipped duplicate tool call.", tool_call_id=tc["id"]))
                 continue
             seen_calls.add(signature)
+            # Per-tool config so Galileo shows which tool was used + args in span metadata
+            args_str = json.dumps(tc.get("args", {}), default=str)[:200]
+            tool_config = merge_node_config(
+                invoke_config,
+                metadata={
+                    "tool_name": tc["name"],
+                    "tool_args": args_str,
+                },
+                tags=["tool", f"tool:{tc['name']}"],
+            )
             try:
-                out = tool_map[tc["name"]].invoke(tc["args"])
+                out = tool_map[tc["name"]].invoke(tc["args"], config=tool_config)
             except Exception as exc:
                 out = f"TOOL_ERROR[{tc['name']}]: {exc}"
             log.append(tc["name"])

@@ -40,6 +40,38 @@ def ensure_galileo_initialized() -> None:
     _INITIALIZED = True
 
 
+def _get_config_from_context() -> dict[str, Any] | None:
+    """Get current RunnableConfig from LangChain context (set when running inside graph.invoke)."""
+    try:
+        from langchain_core.runnables.config import var_child_runnable_config
+
+        ctx_config = var_child_runnable_config.get()
+        return dict(ctx_config) if ctx_config else None
+    except Exception:
+        return None
+
+
+def merge_node_config(
+    config: dict[str, Any] | None,
+    *,
+    metadata: dict[str, Any] | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """Merge node metadata/tags into config. Preserves parent run tree for correct span nesting.
+    Uses LangChain context when config is None (nodes may not receive config as param).
+    Falls back to get_langchain_config() when no config with callbacks is available."""
+    if config is None:
+        config = _get_config_from_context()
+    if not config or not config.get("callbacks"):
+        return get_langchain_config(metadata=metadata, tags=tags)
+    merged: dict[str, Any] = dict(config)
+    if metadata:
+        merged["metadata"] = {**(merged.get("metadata") or {}), **metadata}
+    if tags:
+        merged["tags"] = list(merged.get("tags") or []) + list(tags)
+    return merged
+
+
 def get_langchain_config(*, metadata: dict[str, Any] | None = None, tags: list[str] | None = None) -> dict[str, Any]:
     # If Galileo is OFF, return empty config so LangChain calls stay normal.
     if not is_galileo_enabled():
