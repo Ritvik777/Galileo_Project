@@ -1,7 +1,9 @@
+#RunnableConfig from LangChain – config object passed through the graph (e.g. callbacks, run metadata).
 from langchain_core.runnables import RunnableConfig
-
+#states
 from agents.state import AgentState
 from llm import get_llm
+#merge_node_config to add node metadata to the config.
 from observability import merge_node_config
 
 # GalileoCallback (via graph.invoke config) logs this node; no @log_span to avoid duplicate spans.

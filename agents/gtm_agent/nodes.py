@@ -1,10 +1,10 @@
 import re
-
+#LangGraph/LangChain config object, invocation and nodes passing.
 from langchain_core.runnables import RunnableConfig
-
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, call_tools
+#merges config for observability (metadata, tags).
 from observability import merge_node_config
 
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
@@ -26,7 +26,7 @@ def gtm_retrieve(state: AgentState, config: RunnableConfig | None = None) -> dic
 
 
 def pricing_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
-    resp = get_llm(temperature=0).invoke(
+    resp = get_llm(temperature=0.7).invoke( #temperature 0 for deterministic responses.
         "Does this question ask about pricing, cost, or plans? "
         "Reply ONLY 'yes' or 'no'.\n\n"
         f"Question: {state['question']}\nAnswer:",
@@ -37,7 +37,7 @@ def pricing_gate(state: AgentState, config: RunnableConfig | None = None) -> dic
         ) or None,
     )
     is_pricing = "yes" in resp.content.strip().lower()
-    label = "🔒 pricing — email needed" if is_pricing else "✅ not pricing"
+    label = "🔒 pricing — email needed" if is_pricing else "✅ not pricing" #UI trace label.
     return {"is_pricing": is_pricing, "steps": [f"Pricing Gate → {label}"]}
 
 
@@ -80,3 +80,13 @@ def gtm_generate(state: AgentState, config: RunnableConfig | None = None) -> dic
         ) or None,
     )
     return {"answer": resp.content, "steps": [f"GTM Generate → {len(resp.content)} chars"]}
+
+
+
+# Overall flow
+# gtm_retrieve → fetch context via search tools.
+# pricing_gate → decide if the question is about pricing.
+# route_pricing → branch:
+# Pricing: → collect_email → route_email → either ask for email or continue.
+# Not pricing: → gtm_generate.
+# gtm_generate uses the context and, when allowed, full pricing info to produce the final answer.

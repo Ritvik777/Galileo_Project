@@ -1,33 +1,46 @@
 import re
 from typing import Any
-
+#LangGraph/LangChain config object, invocation and nodes passing.
 from langchain_core.runnables import RunnableConfig
-
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, apollo_search, send_email, call_tools
+#merges config for observability (metadata, tags).
 from observability import merge_node_config
 
 
-LEAD_KEYWORDS = {"research leads", "find leads", "find prospects", "find companies", "find people", "who can i", "prospect", "leads for"}
-SEND_KEYWORDS = {"send it", "send them", "send those", "send the email", "send email", "mail them", "email them", "deliver", "blast"}
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
-def _wants_leads(question: str) -> bool:
-    q = question.lower()
-    return any(kw in q for kw in LEAD_KEYWORDS)
-
-
-def _should_send(question: str) -> bool:
-    q = question.lower()
-    if any(kw in q for kw in SEND_KEYWORDS):
-        return True
-
-    # If user includes an address and asks to send, treat it as explicit send intent.
-    has_email = re.search(EMAIL_PATTERN, question) is not None
-    has_send_verb = bool(re.search(r"\bsend\b", q))
-    return has_email and has_send_verb
+def _llm_leads_decision(question: str, config: RunnableConfig | None = None) -> str | None:
+    """LLM decides if user wants to find leads/prospects. Returns 'leads' or 'content', or None on failure."""
+    try:
+        llm = get_llm(temperature=0)
+        resp = llm.invoke(
+            "Decide whether the user wants to FIND LEADS/PROSPECTS (people or companies to contact).\n"
+            "Return exactly one word: leads or content.\n\n"
+            "Rules:\n"
+            "- leads: finding prospects, research leads, find companies, find people to contact, "
+            "who can I reach out to, prospect list\n"
+            "- content: writing emails, LinkedIn posts, marketing copy, drafting outreach "
+            "(even if targeting a specific audience)\n"
+            "- If uncertain, return content.\n\n"
+            f"User message: {question}\n"
+            "Decision:",
+            config=merge_node_config(
+                config,
+                metadata={"node": "leads_gate_decision", "agent_type": "outreach"},
+                tags=["agent:outreach", "gate:leads"],
+            ) or None,
+        )
+        decision = str(resp.content).strip().lower()
+        if "leads" in decision:
+            return "leads"
+        if "content" in decision:
+            return "content"
+        return None
+    except Exception:
+        return None
 
 
 def _extract_emails(text: str) -> list[str]:
@@ -66,7 +79,11 @@ def _llm_send_decision(question: str, draft: str, config: RunnableConfig | None 
 def outreach_research(state: AgentState, config: RunnableConfig | None = None) -> dict:
     q = state["question"]
 
-    if _wants_leads(q):
+    llm_decision = _llm_leads_decision(q, config)
+    wants_leads = llm_decision == "leads" if llm_decision is not None else False
+    source = "llm" if llm_decision is not None else "default"
+
+    if wants_leads:
         ctx, log = call_tools(
             q,
             tools=[apollo_search, search_knowledge_base],
@@ -79,6 +96,7 @@ def outreach_research(state: AgentState, config: RunnableConfig | None = None) -
                 "ALWAYS call apollo_search. Do NOT skip it."
             ),
         )
+        path_label = "leads (apollo)"
     else:
         ctx, log = call_tools(
             q,
@@ -90,8 +108,9 @@ def outreach_research(state: AgentState, config: RunnableConfig | None = None) -
                 "Use web_search for company/industry info to personalize."
             ),
         )
+        path_label = "content"
 
-    return {"context": ctx, "steps": [f"Outreach Research → {', '.join(log) or 'none'}"]}
+    return {"context": ctx, "steps": [f"Outreach Research({source}) → {path_label}, {', '.join(log) or 'none'}"]}
 
 
 def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -> dict:
@@ -159,12 +178,8 @@ def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -
 
 def send_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     llm_decision = _llm_send_decision(state["question"], state.get("answer", ""), config)
-    if llm_decision is None:
-        should_send = _should_send(state["question"])
-        source = "rule-fallback"
-    else:
-        should_send = llm_decision == "send"
-        source = "llm"
+    should_send = llm_decision == "send" if llm_decision is not None else False
+    source = "llm" if llm_decision is not None else "default"
     label = "📤 user wants to SEND" if should_send else "👀 review only (no send)"
     return {"send_requested": should_send, "steps": [f"Send Gate({source}) → {label}"]}
 
