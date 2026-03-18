@@ -18,7 +18,19 @@ This folder contains a baseline evaluation suite for the multi-agent app.
 
 ## Dataset size
 
-The suite uses 15 synthetic examples in `run_galileo_evals.py`.
+The suite uses 17 synthetic examples in `run_galileo_evals.py`.
+
+## Tool coverage check (sessions mode)
+
+- In default `sessions` mode, the script prints observed tool coverage from pipeline traces.
+- Expected coverage includes:
+  - `search_knowledge_base`
+  - `web_search`
+  - `apollo_search`
+  - `send_email`
+- At the end of a run, it prints either:
+  - `Tool coverage check: PASS (all expected tools observed).`
+  - or a missing-tools list you can use to tune dataset prompts.
 
 ## Run
 

@@ -1,3 +1,12 @@
+"""
+Simple Galileo SDK helper layer.
+
+Think of Galileo like a "flight recorder" for the AI app:
+- it records what happened
+- in what order
+- and with which inputs/outputs
+"""
+
 import os
 from functools import wraps
 from typing import Any, Callable
@@ -5,9 +14,11 @@ from typing import Any, Callable
 from config import GALILEO_API_KEY, GALILEO_LOG_STREAM, GALILEO_PROJECT
 
 try:
+    # Galileo SDK imports (real recorder).
     from galileo import galileo_context, log as galileo_log
     from galileo.handlers.langchain import GalileoCallback
 except Exception:
+    # Safe fallback: app still runs even if Galileo SDK is missing.
     galileo_context = None
     galileo_log = None
     GalileoCallback = None
@@ -16,6 +27,7 @@ _INITIALIZED = False
 
 
 def is_galileo_enabled() -> bool:
+    # Galileo is ON only when credentials + SDK are available.
     return bool(GALILEO_API_KEY and GALILEO_PROJECT and GALILEO_LOG_STREAM and galileo_context and GalileoCallback)
 
 
@@ -23,17 +35,21 @@ def ensure_galileo_initialized() -> None:
     global _INITIALIZED
     if _INITIALIZED or not is_galileo_enabled():
         return
+    # Step 1: connect this app process to one Galileo project + log stream.
     galileo_context.init(project=GALILEO_PROJECT, log_stream=GALILEO_LOG_STREAM)
     _INITIALIZED = True
 
 
 def get_langchain_config(*, metadata: dict[str, Any] | None = None, tags: list[str] | None = None) -> dict[str, Any]:
+    # If Galileo is OFF, return empty config so LangChain calls stay normal.
     if not is_galileo_enabled():
         return {}
     ensure_galileo_initialized()
 
+    # Step 2: get a Galileo logger used to attach callbacks to LLM/tool calls.
     logger = galileo_context.get_logger_instance(project=GALILEO_PROJECT, log_stream=GALILEO_LOG_STREAM)
     in_experiment = logger.current_parent() is not None
+    # Step 3: callback lets Galileo listen to each LangChain invoke event.
     callback = GalileoCallback(
         galileo_logger=logger,
         start_new_trace=not in_experiment,
@@ -48,6 +64,7 @@ def get_langchain_config(*, metadata: dict[str, Any] | None = None, tags: list[s
 
 
 def log_span(*, span_type: str = "workflow", name: str | None = None) -> Callable:
+    # Decorator factory: wraps a function as one Galileo span.
     if galileo_log:
         kwargs = {"span_type": span_type}
         if name:
@@ -59,6 +76,7 @@ def log_span(*, span_type: str = "workflow", name: str | None = None) -> Callabl
 
             @wraps(fn)
             def _wrapped(*args: Any, **kwargs: Any) -> Any:
+                # Always ensure Galileo connection exists before logging spans.
                 ensure_galileo_initialized()
                 return decorated(*args, **kwargs)
 
@@ -67,6 +85,7 @@ def log_span(*, span_type: str = "workflow", name: str | None = None) -> Callabl
         return _decorator
 
     def _noop_decorator(fn: Callable) -> Callable:
+        # Galileo OFF path: no-op decorator keeps behavior unchanged.
         @wraps(fn)
         def _wrapped(*args: Any, **kwargs: Any) -> Any:
             return fn(*args, **kwargs)
@@ -77,15 +96,18 @@ def log_span(*, span_type: str = "workflow", name: str | None = None) -> Callabl
 
 
 def get_eval_project(default: str = "galileo-marketing-ai-evals") -> str:
+    # Evals can log into a separate Galileo project if desired.
     return os.getenv("GALILEO_EVAL_PROJECT") or GALILEO_PROJECT or default
 
 
 def start_chat_session(session_name: str) -> bool:
+    # UI uses sessions so each chat thread is grouped in Galileo.
     if not is_galileo_enabled():
         return False
     ensure_galileo_initialized()
     try:
         logger = galileo_context.get_logger_instance(project=GALILEO_PROJECT, log_stream=GALILEO_LOG_STREAM)
+        # "Session" = one conversation thread in Galileo UI.
         logger.start_session(name=session_name)
         return True
     except Exception:
@@ -93,6 +115,7 @@ def start_chat_session(session_name: str) -> bool:
 
 
 def get_logger_instance():
+    # Shared helper so other modules can start traces, sessions, and flush logs.
     if not is_galileo_enabled():
         return None
     ensure_galileo_initialized()
@@ -103,6 +126,7 @@ def get_logger_instance():
 
 
 def get_console_links() -> dict[str, str]:
+    # Convenience links for debugging (project + log stream pages).
     logger = get_logger_instance()
     if logger is None:
         return {}

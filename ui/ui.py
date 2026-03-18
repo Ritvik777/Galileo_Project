@@ -324,6 +324,7 @@ def _push_assistant_message(result: dict) -> None:
 def handle_new_prompt(prompt: str) -> None:
     if not st.session_state.messages and not st.session_state.galileo_session_started:
         session_name = f"UI Streamlit {st.session_state.ui_streamlit_session_id}"
+        # Start one Galileo session per fresh chat thread from the UI.
         st.session_state.galileo_session_started = start_chat_session(session_name)
     st.session_state.messages.append({"role": "user", "content": prompt})
 

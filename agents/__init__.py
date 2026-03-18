@@ -15,11 +15,13 @@ from observability import ensure_galileo_initialized, get_logger_instance, is_ga
 
 
 def ask(question: str) -> dict:
+    # Make sure Galileo is ready before we run the graph.
     ensure_galileo_initialized()
     base_state = {
         "question": question, "agent_type": "", "context": "", "answer": "",
         "is_pricing": False, "user_email": "", "send_requested": False, "steps": [],
     }
+    # If Galileo is not configured, run normally without tracing.
     if not is_galileo_enabled():
         return graph.invoke(base_state)
 
@@ -27,18 +29,22 @@ def ask(question: str) -> dict:
     if logger is None:
         return graph.invoke(base_state)
 
+    # If a parent trace already exists, we join it instead of creating nested top traces.
     in_existing_trace = logger.current_parent() is not None
     if not in_existing_trace:
+        # Start one top-level trace for this user question.
         logger.start_trace(input={"question": question}, name="ask_agent")
     try:
         result = graph.invoke(base_state)
         if not in_existing_trace:
+            # Finish + flush so this trace appears in Galileo UI quickly.
             logger.conclude(result.get("answer", ""))
             logger.flush()
         return result
     except Exception:
         if not in_existing_trace:
             try:
+                # Flush partial trace on errors for debugging.
                 logger.flush()
             except Exception:
                 pass
