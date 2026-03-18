@@ -6,6 +6,20 @@ Runtime flow is: classify request -> run branch nodes -> apply gate logic -> pro
 
 **Click here for Technical Understanding Blog:** [https://ritvik777.github.io/Galileo_Project/](https://ritvik777.github.io/Galileo_Project/)
 
+## Official links (services used in this project)
+
+| What we use | Link |
+|---|---|
+| Galileo (tracing + evals) | [app.galileo.ai](https://app.galileo.ai/) |
+| Anthropic API | [console.anthropic.com](https://console.anthropic.com/) |
+| Google AI Studio (embedding key) | [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey) |
+| Qdrant Cloud | [cloud.qdrant.io](https://cloud.qdrant.io/) |
+| LangGraph Docs | [LangGraph documentation](https://langchain-ai.github.io/langgraph/) |
+| Streamlit Docs | [docs.streamlit.io](https://docs.streamlit.io/) |
+| Apollo API | [apollo.io](https://www.apollo.io/) |
+| SendGrid | [sendgrid.com](https://sendgrid.com/) |
+| DuckDuckGo Search package | [duckduckgo-search on PyPI](https://pypi.org/project/duckduckgo-search/) |
+
 ## Galileo SDK placement in code (quick map)
 
 - `observability/galileo.py`

@@ -76,6 +76,30 @@ observability/galileo.py        # tracing/session setup
 evals/run_galileo_evals.py      # baseline evaluation suite
 ```
 
+### File-by-file map (detailed)
+
+| File | What it does |
+|---|---|
+| `app.py` | Main Streamlit entrypoint that initializes app shell and chat loop. |
+| `ui/ui.py` | UI logic: styling, sidebar blocks, upload handlers, chat rendering, and trace display. |
+| `services/agent_service.py` | Service adapter for agent runtime calls and graph image loading. |
+| `services/vector_db_service.py` | Service adapter for adding docs/PDFs and reading DB counts. |
+| `agents/__init__.py` | Runtime `ask()` entrypoint with top-level graph invocation and trace lifecycle. |
+| `agents/graph.py` | LangGraph wiring for nodes and conditional routing. |
+| `agents/state.py` | Shared `AgentState` schema and merged `steps` reducer behavior. |
+| `agents/router_agent/nodes.py` | Router classification logic (`gtm` vs `outreach`) with rule and LLM fallback. |
+| `agents/gtm_agent/nodes.py` | GTM branch nodes: retrieve, pricing/email gates, and GTM answer generation. |
+| `agents/outreach_agent/nodes.py` | Outreach branch nodes: research, draft generation, send gate, send execution. |
+| `agents/tools.py` | Shared tools and tool-routing loop (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`). |
+| `vector_db/database.py` | Qdrant setup, collection checks, add/search/count operations. |
+| `vector_db/chunker.py` | Text chunking and PDF extraction utilities. |
+| `vector_db/embeddings.py` | Gemini embedding model setup. |
+| `llm.py` | Anthropic model factory and env validation. |
+| `config.py` | Global config/env variable loading. |
+| `observability/galileo.py` | Galileo SDK integration for spans, callbacks, traces, sessions, and console links. |
+| `evals/run_galileo_evals.py` | Eval runner (sessions mode + experiment mode + tool coverage checks). |
+| `evals/README.md` | Evaluation guide and Galileo eval usage details. |
+
 ---
 
 ## Tech stack
@@ -127,6 +151,20 @@ Required Galileo env vars are in `.env.example`:
 - `GALILEO_API_KEY`
 - `GALILEO_PROJECT`
 - `GALILEO_LOG_STREAM`
+
+## Official links for all core services
+
+| What we use | Link |
+|---|---|
+| Galileo (observability/evals) | [app.galileo.ai](https://app.galileo.ai/) |
+| Anthropic API Console | [console.anthropic.com](https://console.anthropic.com/) |
+| Google AI Studio (API key for embeddings) | [makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey) |
+| Qdrant Cloud | [cloud.qdrant.io](https://cloud.qdrant.io/) |
+| LangGraph Docs | [LangGraph documentation](https://langchain-ai.github.io/langgraph/) |
+| Streamlit Docs | [docs.streamlit.io](https://docs.streamlit.io/) |
+| Apollo API | [apollo.io](https://www.apollo.io/) |
+| SendGrid | [sendgrid.com](https://sendgrid.com/) |
+| DuckDuckGo Search package | [duckduckgo-search on PyPI](https://pypi.org/project/duckduckgo-search/) |
 
 ## Setup and run
 
