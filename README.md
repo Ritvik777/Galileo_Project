@@ -5,7 +5,7 @@ This repository is a **Galileo: AI Marketing Agent with Observations & Evals** b
 This multi-agent system is built for two production workflows in one assistant: **GTM product support** and **outreach content execution**.  
 Each user request is first routed to the correct specialist branch, then processed through branch-specific nodes that gather context, apply business gates (pricing email verification or send intent), and return a final response with full Galileo trace visibility.
 
-- Router decides between **GTM** and **Outreach** behavior
+- Supervisor Routing Agent decides between **GTM** and **Outreach** behavior
 - GTM branch answers product and pricing questions
 - Outreach branch creates content, finds leads, and can send emails
 - Full observability with Galileo tracing/session support
@@ -30,8 +30,8 @@ START -> classify
 
 ### Agents
 
-- **Router Agent** (`agents/router_agent/nodes.py`)
-  - Uses rule-based hints first, then LLM fallback
+- **Supervisor Routing Agent** (`agents/router_agent/nodes.py`)
+  - Uses LLM for intent classification
   - Routes to `gtm` or `outreach`
 
 - **GTM Agent** (`agents/gtm_agent/nodes.py`)
@@ -87,7 +87,7 @@ evals/run_galileo_evals.py      # baseline evaluation suite
 | `agents/__init__.py` | Runtime `ask()` entrypoint with top-level graph invocation and trace lifecycle. |
 | `agents/graph.py` | LangGraph wiring for nodes and conditional routing. |
 | `agents/state.py` | Shared `AgentState` schema and merged `steps` reducer behavior. |
-| `agents/router_agent/nodes.py` | Router classification logic (`gtm` vs `outreach`) with rule and LLM fallback. |
+| `agents/router_agent/nodes.py` | Supervisor Routing Agent classification logic (`gtm` vs `outreach`) using LLM. |
 | `agents/gtm_agent/nodes.py` | GTM branch nodes: retrieve, pricing/email gates, and GTM answer generation. |
 | `agents/outreach_agent/nodes.py` | Outreach branch nodes: research, draft generation, send gate, send execution. |
 | `agents/tools.py` | Shared tools and tool-routing loop (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`). |

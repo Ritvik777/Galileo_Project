@@ -28,13 +28,13 @@ EXPECTED_TOOL_INVOCATIONS = {
 }
 
 DATASET = [
-    # 01-04: GTM and pricing behavior (drives router -> GTM path).
+    # 01-04: GTM and pricing behavior (drives Supervisor Routing Agent -> GTM path).
     {"input": "What is Galileo and how does it help teams evaluate LLM apps?"},
     {"input": "I need Galileo pricing for my team."},
     {"input": "My email is ritvik@dauji.ai. Please share Galileo pricing details now."},
     {"input": "What does Galileo cost? My email is ritvik@dauji.ai"},
 
-    # 05-08: Outreach generation behavior (router -> Outreach path, draft only).
+    # 05-08: Outreach generation behavior (Supervisor Routing Agent -> Outreach path, draft only).
     {"input": "Write a short LinkedIn post about improving AI reliability with Galileo."},
     {"input": "Draft a cold email to CTOs at Series B SaaS companies about Galileo."},
     {"input": "Create outreach copy for AI platform teams evaluating observability tools."},

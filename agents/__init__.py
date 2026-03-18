@@ -5,7 +5,7 @@ agents/ — The multi-agent system
   tools.py              → shared tools (RAG + web search)
   graph.py              → wires everything into a LangGraph
 
-  router_agent/         → 🚦 Router Agent (picks which agent handles it)
+  router_agent/         → 🚦 Supervisor Routing Agent (picks which agent handles it)
   gtm_agent/            → 🎯 GTM Agent (product questions + pricing gate)
   outreach_agent/       → 📝 Outreach Agent (content creation)
 """

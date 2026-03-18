@@ -50,7 +50,7 @@ Runtime flow is: classify request -> run branch nodes -> apply gate logic -> pro
 
 The app has:
 
-- A **Router agent** (`gtm` vs `outreach`)
+- A **Supervisor Routing Agent** (`gtm` vs `outreach`)
 - A **GTM branch** (retrieval, pricing gate, email collection, answer generation)
 - An **Outreach branch** (research, content generation, send gate, optional SendGrid delivery)
 

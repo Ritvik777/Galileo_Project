@@ -393,7 +393,7 @@
       </p>
       <div class="chip-row">
         <span class="chip">LangGraph</span>
-        <span class="chip">Router + GTM + Outreach</span>
+        <span class="chip">Supervisor Routing Agent + GTM + Outreach</span>
         <span class="chip">Qdrant + Gemini Embeddings</span>
         <span class="chip">Anthropic LLM</span>
         <span class="chip">Galileo Tracing + Evals</span>
@@ -420,7 +420,7 @@
       <h2>Step 1: Architecture Overview</h2>
       <p>The assistant behaves like a small team with one coordinator and two specialists:</p>
       <ul>
-        <li><strong>Router Agent:</strong> reads the user request and picks the best branch.</li>
+        <li><strong>Supervisor Routing Agent:</strong> reads the user request and picks the best branch.</li>
         <li><strong>GTM Agent:</strong> handles product, features, comparisons, and pricing logic.</li>
         <li><strong>Outreach Agent:</strong> handles content generation, lead research, and optional email sending.</li>
       </ul>
@@ -439,7 +439,7 @@
           <tr><td><span class="mono">agents/__init__.py</span></td><td>Main runtime API (`ask`) that initializes tracing and invokes compiled graph.</td></tr>
           <tr><td><span class="mono">agents/graph.py</span></td><td>Defines LangGraph nodes and all edges/conditional routes.</td></tr>
           <tr><td><span class="mono">agents/state.py</span></td><td>Shared `AgentState` schema and `steps` merge behavior across nodes.</td></tr>
-          <tr><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Intent classification (`gtm` vs `outreach`) using rule hints + LLM fallback.</td></tr>
+          <tr><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Intent classification (`gtm` vs `outreach`) using LLM.</td></tr>
           <tr><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>GTM branch: retrieve context, pricing gate, email gate, final GTM generation.</td></tr>
           <tr><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Outreach branch: research, draft generation, send gate, optional SendGrid send.</td></tr>
           <tr><td><span class="mono">agents/tools.py</span></td><td>Shared tools (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`) and tool-calling loop.</td></tr>
@@ -464,7 +464,7 @@
         </thead>
         <tbody>
           <tr><td>Orchestration</td><td><span class="mono">LangGraph</span></td><td>Node graph in <span class="mono">agents/graph.py</span> with conditional edges for routing.</td></tr>
-          <tr><td>Generation LLM</td><td><span class="mono">ChatAnthropic</span></td><td>Used in router, gates, and generation nodes via <span class="mono">llm.py</span>.</td></tr>
+          <tr><td>Generation LLM</td><td><span class="mono">ChatAnthropic</span></td><td>Used in supervisor routing, gates, and generation nodes via <span class="mono">llm.py</span>.</td></tr>
           <tr><td>Embeddings</td><td><span class="mono">Google Gemini Embeddings</span></td><td>Converts knowledge docs into vectors for Qdrant retrieval.</td></tr>
           <tr><td>Vector Store</td><td><span class="mono">Qdrant Cloud</span></td><td>Stores chunks and returns similarity-scored context for tool calls.</td></tr>
           <tr><td>Web Research</td><td><span class="mono">DuckDuckGo</span></td><td>Fallback/augmentation signal for external market context.</td></tr>
@@ -552,7 +552,7 @@
           <tr><td><span class="mono">user_email</span></td><td><span class="mono">collect_email</span></td><td>Required for gated pricing output</td><td><span class="mono">ritvik@dauji.ai</span></td></tr>
           <tr><td><span class="mono">send_requested</span></td><td><span class="mono">send_gate</span></td><td>Controls send vs review routing</td><td><span class="mono">true</span> / <span class="mono">false</span></td></tr>
           <tr><td><span class="mono">answer</span></td><td><span class="mono">gtm_generate</span> / <span class="mono">outreach_generate</span> / <span class="mono">outreach_send</span></td><td>Final user-facing response</td><td>Generated answer or send summary</td></tr>
-          <tr><td><span class="mono">steps</span></td><td>Every node</td><td>Trace log shown in UI and eval parsing</td><td>["Router -> GTM", "..."]</td></tr>
+          <tr><td><span class="mono">steps</span></td><td>Every node</td><td>Trace log shown in UI and eval parsing</td><td>["Supervisor Routing Agent -> GTM", "..."]</td></tr>
         </tbody>
       </table>
     </section>

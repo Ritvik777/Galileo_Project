@@ -241,7 +241,7 @@ def _render_graph() -> None:
 def _render_how_it_works() -> None:
     with st.expander("🤖 How it works", expanded=False):
         st.markdown("""
-**Router Agent** classifies your message:
+**Supervisor Routing Agent** classifies your message:
 - Product / pricing question → **GTM Agent**
 - Content creation request → **Outreach Agent**
 
