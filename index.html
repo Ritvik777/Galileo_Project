@@ -417,7 +417,7 @@
     </section>
 
     <section class="section">
-      <h2>Plain-English Architecture Overview</h2>
+      <h2>Step 1: Architecture Overview</h2>
       <p>The assistant behaves like a small team with one coordinator and two specialists:</p>
       <ul>
         <li><strong>Router Agent:</strong> reads the user request and picks the best branch.</li>
@@ -427,8 +427,37 @@
       <p>All branches use one shared state object, so every node updates the same request context consistently.</p>
     </section>
 
+    <section class="section">
+      <h2>Step 2: Project Map (What Each File Does)</h2>
+      <table>
+        <thead><tr><th>File</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><span class="mono">app.py</span></td><td>Main Streamlit entrypoint that boots the UI and wires sidebar + chat loop.</td></tr>
+          <tr><td><span class="mono">ui/ui.py</span></td><td>UI behavior: styles, upload widgets, chat history rendering, prompt handling, and trace display.</td></tr>
+          <tr><td><span class="mono">services/agent_service.py</span></td><td>Thin service wrapper that calls the runtime graph entrypoint.</td></tr>
+          <tr><td><span class="mono">services/vector_db_service.py</span></td><td>Thin service wrapper for adding docs/PDFs and checking vector DB counts.</td></tr>
+          <tr><td><span class="mono">agents/__init__.py</span></td><td>Main runtime API (`ask`) that initializes tracing and invokes compiled graph.</td></tr>
+          <tr><td><span class="mono">agents/graph.py</span></td><td>Defines LangGraph nodes and all edges/conditional routes.</td></tr>
+          <tr><td><span class="mono">agents/state.py</span></td><td>Shared `AgentState` schema and `steps` merge behavior across nodes.</td></tr>
+          <tr><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Intent classification (`gtm` vs `outreach`) using rule hints + LLM fallback.</td></tr>
+          <tr><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>GTM branch: retrieve context, pricing gate, email gate, final GTM generation.</td></tr>
+          <tr><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Outreach branch: research, draft generation, send gate, optional SendGrid send.</td></tr>
+          <tr><td><span class="mono">agents/tools.py</span></td><td>Shared tools (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`) and tool-calling loop.</td></tr>
+          <tr><td><span class="mono">vector_db/database.py</span></td><td>Qdrant client setup, collection validation, add/search/count methods.</td></tr>
+          <tr><td><span class="mono">vector_db/chunker.py</span></td><td>Text chunking and PDF extraction for indexing documents.</td></tr>
+          <tr><td><span class="mono">vector_db/embeddings.py</span></td><td>Gemini embedding model factory used by vector store operations.</td></tr>
+          <tr><td><span class="mono">llm.py</span></td><td>Anthropic LLM loader with config/env validation.</td></tr>
+          <tr><td><span class="mono">config.py</span></td><td>Central configuration and environment variable loading.</td></tr>
+          <tr><td><span class="mono">observability/galileo.py</span></td><td>Galileo SDK integration: init, callbacks, spans, sessions, logger helpers.</td></tr>
+          <tr><td><span class="mono">evals/run_galileo_evals.py</span></td><td>Evaluation harness with sessions mode, experiment mode, and coverage checks.</td></tr>
+          <tr><td><span class="mono">evals/README.md</span></td><td>Eval-specific usage guide, criteria, and Galileo integration notes.</td></tr>
+          <tr><td><span class="mono">README.md</span></td><td>Top-level architecture, setup/run steps, and project navigation docs.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
     <section class="section anchor-target" id="stack">
-      <h2>Framework and Runtime Stack</h2>
+      <h2>Step 3: Framework and Runtime Stack</h2>
       <table>
         <thead>
           <tr><th>Layer</th><th>Technology</th><th>How it is used in this codebase</th></tr>
@@ -446,35 +475,8 @@
       </table>
     </section>
 
-    <section class="section">
-      <h2>Galileo SDK: Tracing and Evaluation Integration</h2>
-      <div class="two-col">
-        <article class="panel">
-          <h3>Tracing in app runtime</h3>
-          <ul>
-            <li><span class="mono">observability/galileo.py</span> is the integration hub for initialization, callbacks, spans, and logger access.</li>
-            <li><span class="mono">ensure_galileo_initialized()</span> connects project + log stream once.</li>
-            <li><span class="mono">get_langchain_config()</span> injects <span class="mono">GalileoCallback</span> into LLM/tool invokes.</li>
-            <li><span class="mono">@log_span(...)</span> decorates nodes/tools so every step is captured as a named span.</li>
-            <li><span class="mono">agents/__init__.py::ask()</span> starts top-level trace (<span class="mono">start_trace</span>) and concludes/flushes it.</li>
-            <li><span class="mono">ui/ui.py</span> starts one Galileo session per fresh chat thread.</li>
-          </ul>
-        </article>
-        <article class="panel">
-          <h3>Evaluation logging flow</h3>
-          <ul>
-            <li><span class="mono">evals/run_galileo_evals.py</span> uses the same <span class="mono">ask()</span> runtime path (no eval/prod drift).</li>
-            <li><strong>Sessions mode:</strong> each dataset row opens its own Galileo session via <span class="mono">logger.start_session(...)</span>.</li>
-            <li><strong>Experiment mode:</strong> uses <span class="mono">galileo.experiments.run_experiment(...)</span> for experiment tracking.</li>
-            <li>Expected tool coverage is inferred from trace <span class="mono">steps</span> and validated at run end.</li>
-            <li>Key env vars: <span class="mono">GALILEO_API_KEY</span>, <span class="mono">GALILEO_PROJECT</span>, <span class="mono">GALILEO_LOG_STREAM</span>.</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
     <section class="section anchor-target" id="graph">
-      <h2>Node Graph (Current Runtime)</h2>
+      <h2>Step 4: Node Graph (Current Runtime)</h2>
       <div class="legend">
         <span><span class="dot" style="background:var(--purple);"></span>Node (function)</span>
         <span><span class="dot" style="background:var(--green);"></span>Edge (always)</span>
@@ -537,7 +539,7 @@
     </section>
 
     <section class="section anchor-target" id="state">
-      <h2>State Contract and How It Evolves</h2>
+      <h2>Step 5: State Contract and How It Evolves</h2>
       <table>
         <thead>
           <tr><th>State field</th><th>Who writes it</th><th>Purpose</th><th>Typical value</th></tr>
@@ -556,7 +558,7 @@
     </section>
 
     <section class="section">
-      <h2>Node-by-Node Execution Framework</h2>
+      <h2>Step 6: Node-by-Node Execution Framework</h2>
       <div class="two-col">
         <article class="panel panel-gtm">
           <h3>GTM branch logic</h3>
@@ -579,8 +581,35 @@
       </div>
     </section>
 
+    <section class="section">
+      <h2>Step 7: Galileo SDK (Tracing + Evaluations)</h2>
+      <div class="two-col">
+        <article class="panel">
+          <h3>Tracing in app runtime</h3>
+          <ul>
+            <li><span class="mono">observability/galileo.py</span> is the integration hub for initialization, callbacks, spans, and logger access.</li>
+            <li><span class="mono">ensure_galileo_initialized()</span> connects project + log stream once.</li>
+            <li><span class="mono">get_langchain_config()</span> injects <span class="mono">GalileoCallback</span> into LLM/tool invokes.</li>
+            <li><span class="mono">@log_span(...)</span> decorates nodes/tools so every step is captured as a named span.</li>
+            <li><span class="mono">agents/__init__.py::ask()</span> starts top-level trace (<span class="mono">start_trace</span>) and concludes/flushes it.</li>
+            <li><span class="mono">ui/ui.py</span> starts one Galileo session per fresh chat thread.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Evaluation logging flow</h3>
+          <ul>
+            <li><span class="mono">evals/run_galileo_evals.py</span> uses the same <span class="mono">ask()</span> runtime path (no eval/prod drift).</li>
+            <li><strong>Sessions mode:</strong> each dataset row opens its own Galileo session via <span class="mono">logger.start_session(...)</span>.</li>
+            <li><strong>Experiment mode:</strong> uses <span class="mono">galileo.experiments.run_experiment(...)</span> for experiment tracking.</li>
+            <li>Expected tool coverage is inferred from trace <span class="mono">steps</span> and validated at run end.</li>
+            <li>Key env vars: <span class="mono">GALILEO_API_KEY</span>, <span class="mono">GALILEO_PROJECT</span>, <span class="mono">GALILEO_LOG_STREAM</span>.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <section class="section anchor-target" id="examples">
-      <h2>Examples: End-to-End Requests</h2>
+      <h2>Step 8: Examples (End-to-End Requests)</h2>
       <div class="three-col">
         <article class="panel">
           <h3>Example A - Pricing</h3>
@@ -604,36 +633,7 @@
     </section>
 
     <section class="section">
-      <h2>Project Map (What Each File Does)</h2>
-      <table>
-        <thead><tr><th>File</th><th>What it does</th></tr></thead>
-        <tbody>
-          <tr><td><span class="mono">app.py</span></td><td>Main Streamlit entrypoint that boots the UI and wires sidebar + chat loop.</td></tr>
-          <tr><td><span class="mono">ui/ui.py</span></td><td>UI behavior: styles, upload widgets, chat history rendering, prompt handling, and trace display.</td></tr>
-          <tr><td><span class="mono">services/agent_service.py</span></td><td>Thin service wrapper that calls the runtime graph entrypoint.</td></tr>
-          <tr><td><span class="mono">services/vector_db_service.py</span></td><td>Thin service wrapper for adding docs/PDFs and checking vector DB counts.</td></tr>
-          <tr><td><span class="mono">agents/__init__.py</span></td><td>Main runtime API (`ask`) that initializes tracing and invokes compiled graph.</td></tr>
-          <tr><td><span class="mono">agents/graph.py</span></td><td>Defines LangGraph nodes and all edges/conditional routes.</td></tr>
-          <tr><td><span class="mono">agents/state.py</span></td><td>Shared `AgentState` schema and `steps` merge behavior across nodes.</td></tr>
-          <tr><td><span class="mono">agents/router_agent/nodes.py</span></td><td>Intent classification (`gtm` vs `outreach`) using rule hints + LLM fallback.</td></tr>
-          <tr><td><span class="mono">agents/gtm_agent/nodes.py</span></td><td>GTM branch: retrieve context, pricing gate, email gate, final GTM generation.</td></tr>
-          <tr><td><span class="mono">agents/outreach_agent/nodes.py</span></td><td>Outreach branch: research, draft generation, send gate, optional SendGrid send.</td></tr>
-          <tr><td><span class="mono">agents/tools.py</span></td><td>Shared tools (`search_knowledge_base`, `web_search`, `apollo_search`, `send_email`) and tool-calling loop.</td></tr>
-          <tr><td><span class="mono">vector_db/database.py</span></td><td>Qdrant client setup, collection validation, add/search/count methods.</td></tr>
-          <tr><td><span class="mono">vector_db/chunker.py</span></td><td>Text chunking and PDF extraction for indexing documents.</td></tr>
-          <tr><td><span class="mono">vector_db/embeddings.py</span></td><td>Gemini embedding model factory used by vector store operations.</td></tr>
-          <tr><td><span class="mono">llm.py</span></td><td>Anthropic LLM loader with config/env validation.</td></tr>
-          <tr><td><span class="mono">config.py</span></td><td>Central configuration and environment variable loading.</td></tr>
-          <tr><td><span class="mono">observability/galileo.py</span></td><td>Galileo SDK integration: init, callbacks, spans, sessions, logger helpers.</td></tr>
-          <tr><td><span class="mono">evals/run_galileo_evals.py</span></td><td>Evaluation harness with sessions mode, experiment mode, and coverage checks.</td></tr>
-          <tr><td><span class="mono">evals/README.md</span></td><td>Eval-specific usage guide, criteria, and Galileo integration notes.</td></tr>
-          <tr><td><span class="mono">README.md</span></td><td>Top-level architecture, setup/run steps, and project navigation docs.</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="section">
-      <h2>Deploy and Read the Full Walkthrough</h2>
+      <h2>Step 9: Deploy and Read the Full Walkthrough</h2>
       <div class="two-col">
         <article class="panel">
           <h3>GitHub Pages setup</h3>
@@ -653,7 +653,7 @@
     </section>
 
     <section class="section">
-      <h2>Official Resource Links</h2>
+      <h2>Step 10: Official Resource Links</h2>
       <table>
         <thead><tr><th>Service</th><th>Why it is used here</th><th>Link</th></tr></thead>
         <tbody>
