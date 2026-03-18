@@ -1,0 +1,4 @@
+[server]
+# Fix noisy torch.classes warnings from Streamlit's module watcher.
+# Trade-off: disabling watcher means code changes require manual app restart.
+fileWatcherType = "none"
