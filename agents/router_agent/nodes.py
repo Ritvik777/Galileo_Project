@@ -11,16 +11,33 @@ logger = logging.getLogger(__name__)
 
 def classify(state: AgentState, config: RunnableConfig | None = None) -> dict:
     """LLM reads the message and picks: 'gtm' or 'outreach'. Falls back to gtm on failure."""
+    question = state.get("question", "") or ""
+
     try:
         llm = get_llm(temperature=0)
+        # Galileo_FeedbackLoop_1: All routing rules in prompt — no manual pattern matching.
         resp = llm.invoke(
             "Classify into ONE word: gtm or outreach.\n\n"
-            "gtm = product questions, features, pricing, comparisons\n"
-            "outreach = write email, LinkedIn post, marketing content\n\n"
-            f"Message: {state['question']}\nCategory:",
+            "RULES — Route to GTM for:\n"
+            "- Product questions, features, pricing, cost, plans, tiers, subscriptions\n"
+            "- Company news and announcements (e.g. 'What did X announce?', 'What did Galileo announce last week?')\n"
+            "- Market and competitor lists (e.g. 'List the top 10 AI observability startups', 'top competitors')\n"
+            "- Comparisons, industry/startup lists\n"
+            "- ANY request for pricing info, even if formatted as email (e.g. 'I need Galileo pricing info formatted "
+            "as an email template for my sales team' → gtm — they want pricing data, just in email form)\n\n"
+            "RULES — Route to OUTREACH only for:\n"
+            "- PRIMARY intent is creating content from scratch: draft an email, write a LinkedIn post, create marketing copy\n"
+            "- User wants you to WRITE outreach content, NOT retrieve and format existing product/pricing info\n"
+            "- If they want info (pricing, news, comparisons, lists) even 'formatted as email' → gtm, not outreach\n\n"
+            "Examples:\n"
+            "• 'What did Galileo announce last week?' → gtm\n"
+            "• 'List the top 10 AI observability startups.' → gtm\n"
+            "• 'I need Galileo pricing info formatted as an email template for my sales team.' → gtm\n"
+            "• 'Draft a cold email to CTOs at Series B SaaS companies.' → outreach\n\n"
+            f"Message: {question}\nCategory:",
             config=merge_node_config(
                 config,
-                metadata={"node": "classify", "question": state["question"]},
+                metadata={"node": "classify", "question": question},
                 tags=["agent:supervisor_routing"],
             ) or None,
         )

@@ -171,6 +171,13 @@ def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -
                 "using the format: **To:** name (email@example.com)\n"
             )
 
+        # Galileo_FeedbackLoop_1: Defense in depth — never output full pricing in Outreach.
+        # Pricing requests should route to GTM; if one slips through, refuse to reveal pricing.
+        pricing_safety = (
+            "\nNEVER reveal specific pricing tiers, dollar amounts, or plan names. "
+            "If the user asks for pricing information, respond: "
+            "'Pricing questions require email verification. Please ask for pricing directly and provide your work email.'"
+        )
         prompt = (
             "You are a content specialist. Create EXACTLY what the user asks for.\n"
             "- If they ask for a LinkedIn post: write ONLY a LinkedIn post\n"
@@ -178,6 +185,7 @@ def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -
             "- Do NOT create multiple content types\n"
             "- No placeholder text like [Your Name]\n"
             "- Sign off as 'The Galileo Team'\n"
+            f"{pricing_safety}\n"
             f"{recipient_hint}\n"
             f"Context:\n{ctx}\n\n"
             f"Request: {state['question']}\nContent:"

@@ -29,10 +29,15 @@ def gtm_retrieve(state: AgentState, config: RunnableConfig | None = None) -> dic
 
 def pricing_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     """LLM decides if question is about pricing. Falls back to not_pricing on failure (safer)."""
+    # Galileo_FeedbackLoop_1: Format-agnostic detection — if user wants pricing info in ANY form
+    # (email template, table, etc.), answer yes. Policy requires email before revealing pricing.
     try:
         resp = get_llm(temperature=0.7).invoke(
-            "Does this question ask about pricing, cost, or plans? "
+            "Does this question ask for pricing, cost, or plans information? "
             "Reply ONLY 'yes' or 'no'.\n\n"
+            "Regardless of output format (email template, table, etc.), if the user wants "
+            "pricing/cost/plans info, answer yes. Example: 'I need pricing info formatted "
+            "as an email template' = yes (they want pricing info, just in a specific format).\n\n"
             f"Question: {state['question']}\nAnswer:",
             config=merge_node_config(
                 config,
