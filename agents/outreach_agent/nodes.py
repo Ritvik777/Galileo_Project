@@ -1,7 +1,10 @@
+import logging
 import re
 from typing import Any
-#LangGraph/LangChain config object, invocation and nodes passing.
+
 from langchain_core.runnables import RunnableConfig
+
+logger = logging.getLogger(__name__)
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, apollo_search, send_email, call_tools
@@ -10,6 +13,7 @@ from observability import merge_node_config
 
 
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
+
 
 def _llm_leads_decision(question: str, config: RunnableConfig | None = None) -> str | None:
     """LLM decides if user wants to find leads/prospects. Returns 'leads' or 'content', or None on failure."""
@@ -37,8 +41,17 @@ def _llm_leads_decision(question: str, config: RunnableConfig | None = None) -> 
             return "leads"
         if "content" in decision:
             return "content"
+        logger.warning(
+            "Leads gate: LLM returned unparseable decision, defaulting to content. "
+            "Raw response: %r",
+            resp.content,
+        )
         return None
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Leads gate: LLM call failed, defaulting to content path. Error: %s",
+            exc,
+        )
         return None
 
 
@@ -47,6 +60,7 @@ def _extract_emails(text: str) -> list[str]:
 
 
 def _llm_send_decision(question: str, draft: str, config: RunnableConfig | None = None) -> str | None:
+    """LLM decides if user wants to send email now. Returns 'send' or 'review', or None on failure."""
     try:
         llm = get_llm(temperature=0.7)
         resp = llm.invoke(
@@ -70,8 +84,17 @@ def _llm_send_decision(question: str, draft: str, config: RunnableConfig | None 
             return "send"
         if "review" in decision:
             return "review"
+        logger.warning(
+            "Send gate: LLM returned unparseable decision, defaulting to review (no send). "
+            "Raw response: %r",
+            resp.content,
+        )
         return None
-    except Exception:
+    except Exception as exc:
+        logger.exception(
+            "Send gate: LLM call failed, defaulting to review (no send). Error: %s",
+            exc,
+        )
         return None
 
 
@@ -80,7 +103,7 @@ def outreach_research(state: AgentState, config: RunnableConfig | None = None) -
 
     llm_decision = _llm_leads_decision(q, config)
     wants_leads = llm_decision == "leads" if llm_decision is not None else False
-    source = "llm" if llm_decision is not None else "default"
+    source = "llm" if llm_decision is not None else "default(fallback)"
 
     if wants_leads:
         ctx, log = call_tools(
@@ -178,7 +201,7 @@ def outreach_generate(state: AgentState, config: RunnableConfig | None = None) -
 def send_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
     llm_decision = _llm_send_decision(state["question"], state.get("answer", ""), config)
     should_send = llm_decision == "send" if llm_decision is not None else False
-    source = "llm" if llm_decision is not None else "default"
+    source = "llm" if llm_decision is not None else "default(fallback)"
     label = "📤 user wants to SEND" if should_send else "👀 review only (no send)"
     return {"send_requested": should_send, "steps": [f"Send Gate({source}) → {label}"]}
 

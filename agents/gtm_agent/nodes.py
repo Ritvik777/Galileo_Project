@@ -1,12 +1,14 @@
+import logging
 import re
-#LangGraph/LangChain config object, invocation and nodes passing.
+
 from langchain_core.runnables import RunnableConfig
+
 from agents.state import AgentState
 from llm import get_llm
 from agents.tools import search_knowledge_base, web_search, call_tools
-#merges config for observability (metadata, tags).
 from observability import merge_node_config
 
+logger = logging.getLogger(__name__)
 EMAIL_PATTERN = r"[\w.+-]+@[\w-]+\.[\w.]+"
 
 
@@ -26,19 +28,36 @@ def gtm_retrieve(state: AgentState, config: RunnableConfig | None = None) -> dic
 
 
 def pricing_gate(state: AgentState, config: RunnableConfig | None = None) -> dict:
-    resp = get_llm(temperature=0.7).invoke( #temperature 0 for deterministic responses.
-        "Does this question ask about pricing, cost, or plans? "
-        "Reply ONLY 'yes' or 'no'.\n\n"
-        f"Question: {state['question']}\nAnswer:",
-        config=merge_node_config(
-            config,
-            metadata={"node": "pricing_gate", "agent_type": "gtm"},
-            tags=["agent:gtm", "gate:pricing"],
-        ) or None,
-    )
-    is_pricing = "yes" in resp.content.strip().lower()
-    label = "🔒 pricing — email needed" if is_pricing else "✅ not pricing" #UI trace label.
-    return {"is_pricing": is_pricing, "steps": [f"Pricing Gate → {label}"]}
+    """LLM decides if question is about pricing. Falls back to not_pricing on failure (safer)."""
+    try:
+        resp = get_llm(temperature=0.7).invoke(
+            "Does this question ask about pricing, cost, or plans? "
+            "Reply ONLY 'yes' or 'no'.\n\n"
+            f"Question: {state['question']}\nAnswer:",
+            config=merge_node_config(
+                config,
+                metadata={"node": "pricing_gate", "agent_type": "gtm"},
+                tags=["agent:gtm", "gate:pricing"],
+            ) or None,
+        )
+        raw = resp.content.strip().lower()
+        is_pricing = "yes" in raw
+        if "yes" not in raw and "no" not in raw:
+            logger.warning(
+                "Pricing gate: LLM returned unclear response, treating as not_pricing. Raw: %r",
+                resp.content,
+            )
+        source = "llm"
+    except Exception as exc:
+        logger.exception(
+            "Pricing gate: LLM call failed, defaulting to not_pricing (no email gate). Error: %s",
+            exc,
+        )
+        is_pricing = False
+        source = "fallback"
+
+    label = "🔒 pricing — email needed" if is_pricing else "✅ not pricing"
+    return {"is_pricing": is_pricing, "steps": [f"Pricing Gate({source}) → {label}"]}
 
 
 def route_pricing(state: AgentState, config: RunnableConfig | None = None) -> str:
