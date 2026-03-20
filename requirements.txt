@@ -9,4 +9,6 @@ qdrant-client
 python-dotenv
 pypdf
 duckduckgo-search
+requests
+sendgrid
 galileo
