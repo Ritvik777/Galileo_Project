@@ -80,7 +80,7 @@ The shared state lives in `agents/state.py` (`question`, `agent_type`, `context`
 
 ## What this eval suite checks
 
-`run_galileo_evals.py` currently uses **10 synthetic test prompts** in `DATASET` across:
+`run_galileo_evals.py` currently uses **17 synthetic test prompts** across:
 
 - GTM product + pricing behavior
 - Outreach draft generation behavior
